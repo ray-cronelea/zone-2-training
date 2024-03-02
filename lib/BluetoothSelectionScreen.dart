@@ -29,15 +29,22 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.refresh),
+        onPressed: () => scanBluetoothDevices,
+      ),
     );
   }
 
   @override
   void initState() {
     super.initState();
+    scanBluetoothDevices();
+  }
 
+  void scanBluetoothDevices() {
     _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
-      _scanResults = results;
+      _scanResults = results.where((scanResult) => scanResult.device.platformName.isNotEmpty).toList();
       for (ScanResult r in results) {
         print('Platform name: ${r.device.platformName}, Device ID: ${r.device.remoteId.str}, RSSI: ${r.rssi}');
       }
@@ -46,7 +53,7 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
       }
     });
 
-    FlutterBluePlus.startScan(timeout: Duration(seconds: 4));
+    FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
   }
 
   @override
@@ -63,7 +70,7 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
           subtitle: Text(_scanResults[index].device.remoteId.str),
           onTap: () {
             print("Returning device id: ${_scanResults[index].device.remoteId.str}");
-            Navigator.pop(context, _scanResults[index].device.remoteId.str);
+            Navigator.pop(context, _scanResults[index].device);
           },
         ),
         separatorBuilder: (context, index) => Divider(),

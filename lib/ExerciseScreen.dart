@@ -9,24 +9,23 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'BluetoothUtils.dart';
 
 class ExerciseScreen extends StatefulWidget {
-  final String hrmBluetoothRemoteIdStr;
-  final String indoorBikeBluetoothRemoteIdStr;
+  final BluetoothDevice hrmBluetoothDevice;
+  final BluetoothDevice indoorBikeBluetoothDevice;
 
-  const ExerciseScreen(this.hrmBluetoothRemoteIdStr, this.indoorBikeBluetoothRemoteIdStr, {super.key});
+  const ExerciseScreen(this.hrmBluetoothDevice, this.indoorBikeBluetoothDevice, {super.key});
 
   @override
-  _ExerciseScreenState createState() => _ExerciseScreenState(hrmBluetoothRemoteIdStr, indoorBikeBluetoothRemoteIdStr);
+  _ExerciseScreenState createState() => _ExerciseScreenState(hrmBluetoothDevice, indoorBikeBluetoothDevice);
 }
 
 class _ExerciseScreenState extends State<ExerciseScreen> {
-  String hrmBluetoothRemoteIdStr;
-  String indoorBikeBluetoothRemoteIdStr;
+  BluetoothDevice hrmBluetoothDevice;
+  BluetoothDevice indoorBikeBluetoothDevice;
 
-  _ExerciseScreenState(this.hrmBluetoothRemoteIdStr, this.indoorBikeBluetoothRemoteIdStr);
+  _ExerciseScreenState(this.hrmBluetoothDevice, this.indoorBikeBluetoothDevice);
 
   int heartRateValue = 0;
   int heartRateTarget = 70;
-  late BluetoothDevice hrmBluetoothDevice;
 
   double minPower = 100;
   double maxPower = 220;
@@ -52,6 +51,18 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
             color: Colors.blue,
           ),
           buildChart(context),
+          Row(
+            children: [
+              IconButton(onPressed: () => {}, icon: Icon(Icons.arrow_back_sharp)),
+              Expanded(
+                child: Column(children: [
+                  const Text("Heart Rate Setpoint", style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text("$heartRateTarget", style: TextStyle(fontWeight: FontWeight.bold)),
+                ]),
+              ),
+              IconButton(onPressed: () => {}, icon: Icon(Icons.arrow_forward_sharp)),
+            ],
+          )
         ],
       ),
     );
@@ -59,16 +70,22 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
 
   @override
   void initState() {
+    super.initState();
     count = 0;
     heartRateSamples = <SampledData>[];
     powerSamples = <SampledData>[];
-    super.initState();
-    startReadingHR();
+    pid = PID(Kp: 1, Ki: 0.1, Kd: 0.05, setPoint: heartRateTarget.toDouble(), minOutput: minPower, maxOutput: maxPower);
+
+    startReadingHeartRate();
+
+    timer = Timer.periodic(const Duration(seconds: 1), periodicTasks);
   }
 
   @override
   void dispose() {
     hrmBluetoothDevice.disconnect();
+    indoorBikeBluetoothDevice.disconnect();
+    timer?.cancel();
     super.dispose();
   }
 
@@ -76,7 +93,8 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     return SfCartesianChart(
         plotAreaBorderWidth: 0,
         primaryXAxis: const NumericAxis(majorGridLines: MajorGridLines(width: 0)),
-        primaryYAxis: NumericAxis(maximum: 250, axisLine: const AxisLine(width: 0), majorTickLines: const MajorTickLines(size: 0), plotBands: <PlotBand>[
+        primaryYAxis:
+            NumericAxis(maximum: 250, axisLine: const AxisLine(width: 0), majorTickLines: const MajorTickLines(size: 0), plotBands: <PlotBand>[
           PlotBand(start: heartRateTarget, end: heartRateTarget, borderWidth: 2, borderColor: Colors.redAccent, dashArray: const <double>[4, 5])
         ]),
         series: <LineSeries<SampledData, int>>[
@@ -103,8 +121,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
         ]);
   }
 
-  void startReadingHR() async {
-    hrmBluetoothDevice = BluetoothDevice.fromId(hrmBluetoothRemoteIdStr);
+  Future<void> startReadingHeartRate() async {
     await hrmBluetoothDevice.connect();
     await hrmBluetoothDevice.discoverServices();
     List<BluetoothService> services = await hrmBluetoothDevice.discoverServices();
@@ -116,16 +133,20 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
       });
     });
     await bluetoothCharacteristic?.setNotifyValue(true);
-    pid = PID(Kp: 1, Ki: 0.1, Kd: 0.05, setPoint: heartRateTarget.toDouble(), minOutput: minPower, maxOutput: maxPower);
-    timer = Timer.periodic(const Duration(seconds: 1), _updateDataSource);
   }
 
-  void _updateDataSource(Timer timer) {
+  void periodicTasks(Timer timer) {
     int currentPowerSetpoint = pid(heartRateValue.toDouble()).toInt();
+    // TODO: send currentPowerSetpoint value to trainer
+    updateChart(currentPowerSetpoint);
+  }
 
+  void updateChart(int currentPowerSetpoint) {
     heartRateSamples!.add(SampledData(sampleNumber: count, value: heartRateValue));
     powerSamples!.add(SampledData(sampleNumber: count, value: currentPowerSetpoint));
-    if (heartRateSamples!.length == 60 * 5) {
+
+    var chartDataMax = 60 * 5;
+    if (heartRateSamples!.length == chartDataMax) {
       heartRateSamples!.removeAt(0);
       _chartSeriesController?.updateDataSource(
         addedDataIndexes: <int>[heartRateSamples!.length - 1],
@@ -134,6 +155,17 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     } else {
       _chartSeriesController?.updateDataSource(
         addedDataIndexes: <int>[heartRateSamples!.length - 1],
+      );
+    }
+    if (powerSamples!.length == chartDataMax) {
+      powerSamples!.removeAt(0);
+      _chartSeriesController?.updateDataSource(
+        addedDataIndexes: <int>[powerSamples!.length - 1],
+        removedDataIndexes: <int>[0],
+      );
+    } else {
+      _chartSeriesController?.updateDataSource(
+        addedDataIndexes: <int>[powerSamples!.length - 1],
       );
     }
     count = count + 1;

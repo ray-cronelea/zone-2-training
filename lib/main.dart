@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'BluetoothSelectionScreen.dart';
 import 'ExerciseScreen.dart';
-import 'HeartRateMonitorDetailPage.dart';
 
 void main() {
   if (Platform.isAndroid) {
@@ -29,8 +29,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String? hrmBluetoothRemoteIdStr;
-  String? indoorBikeBluetoothRemoteIdStr;
+  BluetoothDevice? hrmBluetoothDevice;
+  BluetoothDevice? indoorBikeBluetoothDevice;
 
   @override
   void initState() {
@@ -55,8 +55,8 @@ class _MyAppState extends State<MyApp> {
             const Divider(
               color: Colors.blue,
             ),
-            Text("Heart Rate Monitor Selected: $hrmBluetoothRemoteIdStr"),
-            Text("Indoor Bike Selected: $indoorBikeBluetoothRemoteIdStr"),
+            Text("Heart Rate Monitor Selected: ${hrmBluetoothDevice?.platformName}"),
+            Text("Indoor Bike Selected: ${indoorBikeBluetoothDevice?.platformName}"),
           ],
         ),
       ),
@@ -67,10 +67,6 @@ class _MyAppState extends State<MyApp> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: <Widget>[
-        ElevatedButton(
-          onPressed: hrmSelected() ? () => _navigateHrmDetailPage(context) : null,
-          child: const Text('Debug HRM Data'),
-        ),
         ElevatedButton(
           child: const Text('Pick HRM'),
           onPressed: () => _navigateAndSelectHRMBluetoothDevice(context),
@@ -87,41 +83,32 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  bool hrmSelected() => hrmBluetoothRemoteIdStr != null;
+  bool hrmSelected() => hrmBluetoothDevice != null;
 
-  bool indoorBikeSelected() => indoorBikeBluetoothRemoteIdStr != null;
-
-  Future<dynamic> _navigateHrmDetailPage(BuildContext context) {
-    return Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HeartRateMonitorDetailPage(hrmBluetoothRemoteIdStr!),
-        ));
-  }
+  bool indoorBikeSelected() => indoorBikeBluetoothDevice != null;
 
   Future<void> _navigateAndSelectHRMBluetoothDevice(BuildContext context) async {
-    print("Before Heart rate monitor selected: $hrmBluetoothRemoteIdStr");
-    hrmBluetoothRemoteIdStr = await Navigator.push(
+    hrmBluetoothDevice = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const BluetoothSelectionScreen()),
     );
-    print("Heart rate monitor selected: $hrmBluetoothRemoteIdStr");
+    print("Heart rate monitor selected: ${hrmBluetoothDevice?.platformName}");
     setState(() {});
   }
 
   Future<void> _navigateAndSelectIndoorBikeBluetoothDevice(BuildContext context) async {
-    indoorBikeBluetoothRemoteIdStr = await Navigator.push(
+    indoorBikeBluetoothDevice = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const BluetoothSelectionScreen()),
     );
-    print("Indoor bike selected: $indoorBikeBluetoothRemoteIdStr");
+    print("Indoor bike selected: ${indoorBikeBluetoothDevice?.platformName}");
     setState(() {});
   }
 
   Future<void> _navigateToExercise(BuildContext context) async {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ExerciseScreen(hrmBluetoothRemoteIdStr!, indoorBikeBluetoothRemoteIdStr!)),
+      MaterialPageRoute(builder: (context) => ExerciseScreen(hrmBluetoothDevice!, indoorBikeBluetoothDevice!)),
     );
   }
 }
