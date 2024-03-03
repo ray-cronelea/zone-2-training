@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_ftms/flutter_ftms.dart';
 import 'package:simple_pid/simple_pid.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
@@ -24,9 +24,11 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
 
   _ExerciseScreenState(this.hrmBluetoothDevice, this.indoorBikeBluetoothDevice);
 
-  int heartRateValue = 0;
-  int heartRateTarget = 70;
+  int _currentPowerSetpoint = 0;
+  int _currentPowerActual = 0;
+  int _heartRateValue = 0;
 
+  int heartRateTarget = 70;
   double minPower = 100;
   double maxPower = 220;
 
@@ -34,7 +36,8 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
 
   Timer? timer;
   List<SampledData>? heartRateSamples;
-  List<SampledData>? powerSamples;
+  List<SampledData>? powerSetPointSamples;
+  List<SampledData>? powerActualSamples;
   late int count;
   ChartSeriesController<SampledData, int>? _chartSeriesController;
 
@@ -46,21 +49,22 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
       ),
       body: Column(
         children: [
-          Text("Heart rate: $heartRateValue"),
+          Text("Heart rate: $_heartRateValue"),
+          Text("Actual Power: $_currentPowerActual"),
           const Divider(
             color: Colors.blue,
           ),
           buildChart(context),
           Row(
             children: [
-              IconButton(onPressed: () => {}, icon: Icon(Icons.arrow_back_sharp)),
+              IconButton(onPressed: () => {}, icon: const Icon(Icons.arrow_back_sharp)),
               Expanded(
                 child: Column(children: [
                   const Text("Heart Rate Setpoint", style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text("$heartRateTarget", style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text("$heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold)),
                 ]),
               ),
-              IconButton(onPressed: () => {}, icon: Icon(Icons.arrow_forward_sharp)),
+              IconButton(onPressed: () => {}, icon: const Icon(Icons.arrow_forward_sharp)),
             ],
           )
         ],
@@ -68,15 +72,18 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     );
   }
 
+
   @override
   void initState() {
     super.initState();
     count = 0;
     heartRateSamples = <SampledData>[];
-    powerSamples = <SampledData>[];
+    powerSetPointSamples = <SampledData>[];
+    powerActualSamples = <SampledData>[];
     pid = PID(Kp: 1, Ki: 0.1, Kd: 0.05, setPoint: heartRateTarget.toDouble(), minOutput: minPower, maxOutput: maxPower);
 
     startReadingHeartRate();
+    startReadingAcutalPower();
 
     timer = Timer.periodic(const Duration(seconds: 1), periodicTasks);
   }
@@ -112,7 +119,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
             onRendererCreated: (ChartSeriesController<SampledData, int> controller) {
               _chartSeriesController = controller;
             },
-            dataSource: powerSamples,
+            dataSource: powerSetPointSamples,
             color: Colors.blue,
             xValueMapper: (SampledData data, _) => data.sampleNumber,
             yValueMapper: (SampledData data, _) => data.value,
@@ -121,29 +128,47 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
         ]);
   }
 
+  Future<void> startReadingAcutalPower() async {
+    await indoorBikeBluetoothDevice.connect();
+    List<BluetoothService> services = await indoorBikeBluetoothDevice.discoverServices();
+    BluetoothCharacteristic? bluetoothCharacteristic = BluetoothUtils.getCyclingPowerMeasurementCharacteristic(services);
+    bluetoothCharacteristic?.onValueReceived.listen((value) {
+      int currentActualPower = getCurrentActualPower(value);
+      print("Current actual power: $currentActualPower");
+      setState(() {
+        _currentPowerActual = currentActualPower;
+      });
+    });
+    await bluetoothCharacteristic?.setNotifyValue(true);
+  }
+
   Future<void> startReadingHeartRate() async {
     await hrmBluetoothDevice.connect();
-    await hrmBluetoothDevice.discoverServices();
     List<BluetoothService> services = await hrmBluetoothDevice.discoverServices();
     BluetoothCharacteristic? bluetoothCharacteristic = BluetoothUtils.getHeartRateMeasurementCharacteristic(services);
     bluetoothCharacteristic?.onValueReceived.listen((value) {
       print("New heart rate value received $value");
       setState(() {
-        heartRateValue = value[1];
+        _heartRateValue = value[1];
       });
     });
     await bluetoothCharacteristic?.setNotifyValue(true);
   }
 
   void periodicTasks(Timer timer) {
-    int currentPowerSetpoint = pid(heartRateValue.toDouble()).toInt();
+
+    print("Periodic tasks");
+    _currentPowerSetpoint = pid(_heartRateValue.toDouble()).toInt();
+
     // TODO: send currentPowerSetpoint value to trainer
-    updateChart(currentPowerSetpoint);
+
+    updateChart();
   }
 
-  void updateChart(int currentPowerSetpoint) {
-    heartRateSamples!.add(SampledData(sampleNumber: count, value: heartRateValue));
-    powerSamples!.add(SampledData(sampleNumber: count, value: currentPowerSetpoint));
+  void updateChart() {
+    heartRateSamples!.add(SampledData(sampleNumber: count, value: _heartRateValue));
+    powerSetPointSamples!.add(SampledData(sampleNumber: count, value: _currentPowerSetpoint));
+    powerActualSamples!.add(SampledData(sampleNumber: count, value: _currentPowerActual));
 
     var chartDataMax = 60 * 5;
     if (heartRateSamples!.length == chartDataMax) {
@@ -157,18 +182,36 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
         addedDataIndexes: <int>[heartRateSamples!.length - 1],
       );
     }
-    if (powerSamples!.length == chartDataMax) {
-      powerSamples!.removeAt(0);
+    if (powerSetPointSamples!.length == chartDataMax) {
+      powerSetPointSamples!.removeAt(0);
       _chartSeriesController?.updateDataSource(
-        addedDataIndexes: <int>[powerSamples!.length - 1],
+        addedDataIndexes: <int>[powerSetPointSamples!.length - 1],
         removedDataIndexes: <int>[0],
       );
     } else {
       _chartSeriesController?.updateDataSource(
-        addedDataIndexes: <int>[powerSamples!.length - 1],
+        addedDataIndexes: <int>[powerSetPointSamples!.length - 1],
       );
     }
+    // if (powerActualSamples!.length == chartDataMax) {
+    //   powerActualSamples!.removeAt(0);
+    //   _chartSeriesController?.updateDataSource(
+    //     addedDataIndexes: <int>[powerActualSamples!.length - 1],
+    //     removedDataIndexes: <int>[0],
+    //   );
+    // } else {
+    //   _chartSeriesController?.updateDataSource(
+    //     addedDataIndexes: <int>[powerActualSamples!.length - 1],
+    //   );
+    // }
     count = count + 1;
+  }
+
+  int getCurrentActualPower(List<int> value) {
+    // TODO: check correct values are set here
+    int powerLSB = value[2];
+    int powerMSB = value[3];
+    return (powerMSB << 8) + powerLSB;
   }
 }
 

@@ -12,18 +12,20 @@ void main() {
   if (Platform.isAndroid) {
     WidgetsFlutterBinding.ensureInitialized();
     [Permission.location, Permission.bluetooth, Permission.bluetoothConnect, Permission.bluetoothScan].request().then((status) {
-      runApp(MaterialApp(
+      runApp(const MaterialApp(
         home: MyApp(),
       ));
     });
   } else {
-    runApp(MaterialApp(
+    runApp(const MaterialApp(
       home: MyApp(),
     ));
   }
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
   _MyAppState createState() => _MyAppState();
 }

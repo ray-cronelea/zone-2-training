@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
@@ -12,8 +11,12 @@ class BluetoothSelectionScreen extends StatefulWidget {
 }
 
 class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
+
   List<ScanResult> _scanResults = [];
+  BluetoothAdapterState _bluetoothAdapterState = BluetoothAdapterState.unknown;
+
   late StreamSubscription<List<ScanResult>> _scanResultsSubscription;
+  late StreamSubscription<BluetoothAdapterState> _adapterStateSubscription;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +28,7 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            _buildBluetoothStatusMessage(context),
             _buildListView(),
           ],
         ),
@@ -39,7 +43,23 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
   @override
   void initState() {
     super.initState();
+    startListeningToBluetoothState();
     scanBluetoothDevices();
+  }
+
+  @override
+  void dispose() {
+    _scanResultsSubscription.cancel();
+    _adapterStateSubscription.cancel();
+    super.dispose();
+  }
+
+  void startListeningToBluetoothState() {
+    _adapterStateSubscription = FlutterBluePlus.adapterState.listen((newAdapterState) {
+          setState(() {
+            _bluetoothAdapterState = newAdapterState;
+          });
+        });
   }
 
   void scanBluetoothDevices() {
@@ -52,30 +72,36 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
         setState(() {});
       }
     });
-
     FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
-  }
-
-  @override
-  void dispose() {
-    _scanResultsSubscription.cancel();
-    super.dispose();
   }
 
   Widget _buildListView() {
     return Expanded(
       child: ListView.separated(
         itemBuilder: (context, index) => ListTile(
-          title: Text('${_scanResults[index].device.platformName}(${_scanResults[index].rssi})'),
+          title: Text(_scanResults[index].device.platformName),
           subtitle: Text(_scanResults[index].device.remoteId.str),
           onTap: () {
-            print("Returning device id: ${_scanResults[index].device.remoteId.str}");
             Navigator.pop(context, _scanResults[index].device);
           },
         ),
-        separatorBuilder: (context, index) => Divider(),
+        separatorBuilder: (context, index) => const Divider(),
         itemCount: _scanResults.length,
       ),
+    );
+  }
+
+  Widget _buildBluetoothStatusMessage(BuildContext context) {
+    return Builder(
+      builder: (context) {
+        if (_bluetoothAdapterState != BluetoothAdapterState.on) {
+          return const Text(
+            "Bluetooth not on!",
+            style: TextStyle(color: Colors.red),
+          );
+        }
+        return const Text("");
+      },
     );
   }
 }
