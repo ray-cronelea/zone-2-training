@@ -7,6 +7,9 @@ class BluetoothUtils {
   static const String cyclingPowerMeasurementServiceUUID = "1818";
   static const String cyclingPowerMeasurementCharacteristicUUID = "2a63";
 
+  static const String fitnessMachineServiceUUID ="1826";
+  static const String fitnessMachineControlPointCharacteristicUUID ="2ad9";
+
   static BluetoothCharacteristic? getHeartRateMeasurementCharacteristic(List<BluetoothService> services) {
     return getCharacteristic(services, (characteristic) => BluetoothUtils.isHeartRateMeasurementCharacteristic(characteristic));
   }
@@ -25,6 +28,15 @@ class BluetoothUtils {
         characteristic.characteristicUuid.str == cyclingPowerMeasurementCharacteristicUUID;
   }
 
+  static BluetoothCharacteristic? getFitnessMachineControlPointCharacteristic(List<BluetoothService> services) {
+    return getCharacteristic(services, (characteristic) => BluetoothUtils.isFitnessMachineControlPointCharacteristic(characteristic));
+  }
+
+  static bool isFitnessMachineControlPointCharacteristic(characteristic) {
+    return characteristic.serviceUuid.str == fitnessMachineServiceUUID &&
+        characteristic.characteristicUuid.str == fitnessMachineControlPointCharacteristicUUID;
+  }
+
   static BluetoothCharacteristic? getCharacteristic(List<BluetoothService> services, bool Function(dynamic characteristic) isRequiredPredicate) {
     for (BluetoothService bluetoothService in services) {
       for (BluetoothCharacteristic characteristic in bluetoothService.characteristics) {
@@ -34,8 +46,7 @@ class BluetoothUtils {
         }
       }
     }
-    print("Didn't find characteristic");
-    return null;
+    throw("Didn't find characteristic");
   }
 
 }
