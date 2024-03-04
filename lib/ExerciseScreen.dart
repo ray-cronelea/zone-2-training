@@ -4,8 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:simple_pid/simple_pid.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-import 'package:zone_2_training/devices/HeartRateBluetoothDevice.dart';
-import 'package:zone_2_training/devices/IndoorBikeBluetoothDevice.dart';
+import 'package:zone_2_training/devices/BluetoothHeartRateDevice.dart';
+import 'package:zone_2_training/devices/BluetoothIndoorBikeDevice.dart';
+
+import 'core/ExerciseCore.dart';
+import 'devices/HeartRateDevice.dart';
+import 'devices/IndoorBikeDevice.dart';
 
 class ExerciseScreen extends StatefulWidget {
   final BluetoothDevice hrmBluetoothDevice;
@@ -23,24 +27,20 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
 
   _ExerciseScreenState(this.hrmBluetoothDevice, this.indoorBikeBluetoothDevice);
 
-  late HeartRateBluetoothDevice _heartRateBluetoothDevice;
-  late IndoorBikeBluetoothDevice _indoorBikeBluetoothDevice;
+  late ExerciseCore _exerciseCore;
+  late HeartRateDevice _heartRateDevice;
+  late IndoorBikeDevice _indoorBikeDevice;
 
   int _currentPowerSetpoint = 0;
   int _currentPowerActual = 0;
   int _heartRateValue = 0;
 
   int heartRateTarget = 70;
-  double minPower = 100;
-  double maxPower = 220;
 
-  late PID pid;
-
-  Timer? timer;
-  List<SampledData>? heartRateSamples;
-  List<SampledData>? powerSetPointSamples;
-  List<SampledData>? powerActualSamples;
-  late int count;
+  int sampleCount = 0;
+  List<SampledData> heartRateSamples = <SampledData>[];
+  List<SampledData> powerSetPointSamples = <SampledData>[];
+  List<SampledData> powerActualSamples = <SampledData>[];
   ChartSeriesController<SampledData, int>? _chartSeriesController;
 
   @override
@@ -78,23 +78,21 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   @override
   void initState() {
     super.initState();
-    count = 0;
-    heartRateSamples = <SampledData>[];
-    powerSetPointSamples = <SampledData>[];
-    powerActualSamples = <SampledData>[];
-    pid = PID(Kp: 1, Ki: 0.1, Kd: 0.05, setPoint: heartRateTarget.toDouble(), minOutput: minPower, maxOutput: maxPower);
-
-    startReadingHeartRate();
-    startReadingAcutalPower();
-
-    timer = Timer.periodic(const Duration(seconds: 1), periodicTasks);
+    _exerciseCore = ExerciseCore(BluetoothHeartRateDevice(hrmBluetoothDevice), BluetoothIndoorBikeDevice(indoorBikeBluetoothDevice));
+    Stream<ExerciseSample> exerciseSampleStream = _exerciseCore.start();
+    exerciseSampleStream.listen((exerciseSample) {
+      setState(() {
+        _heartRateValue = exerciseSample.heartRateValue;
+        _currentPowerActual = exerciseSample.powerActual;
+        _currentPowerSetpoint = exerciseSample.powerSetpoint;
+        updateChart();
+      });
+    });
   }
 
   @override
   void dispose() {
-    hrmBluetoothDevice.disconnect();
-    indoorBikeBluetoothDevice.disconnect();
-    timer?.cancel();
+    _exerciseCore.dispose();
     super.dispose();
   }
 
@@ -140,38 +138,10 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
         ]);
   }
 
-  Future<void> startReadingAcutalPower() async {
-    _indoorBikeBluetoothDevice = IndoorBikeBluetoothDevice(indoorBikeBluetoothDevice);
-    await _indoorBikeBluetoothDevice.connect();
-    _indoorBikeBluetoothDevice.getListener().listen((value) {
-      setState(() {
-        _currentPowerActual = value;
-      });
-    });
-  }
-
-  Future<void> startReadingHeartRate() async {
-    _heartRateBluetoothDevice = HeartRateBluetoothDevice(hrmBluetoothDevice);
-    await _heartRateBluetoothDevice.connect();
-    _heartRateBluetoothDevice.getListener().listen((value) {
-      setState(() {
-        _heartRateValue = value;
-      });
-    });
-  }
-
-  void periodicTasks(Timer timer) {
-    setState(() {
-      _currentPowerSetpoint = pid(_heartRateValue.toDouble()).toInt();
-    });
-    _indoorBikeBluetoothDevice.setTargetPower(_currentPowerSetpoint);
-    updateChart();
-  }
-
   void updateChart() {
-    heartRateSamples!.add(SampledData(sampleNumber: count, value: _heartRateValue));
-    powerSetPointSamples!.add(SampledData(sampleNumber: count, value: _currentPowerSetpoint));
-    powerActualSamples!.add(SampledData(sampleNumber: count, value: _currentPowerActual));
+    heartRateSamples!.add(SampledData(sampleNumber: sampleCount, value: _heartRateValue));
+    powerSetPointSamples!.add(SampledData(sampleNumber: sampleCount, value: _currentPowerSetpoint));
+    powerActualSamples!.add(SampledData(sampleNumber: sampleCount, value: _currentPowerActual));
 
     var chartDataMax = 60 * 5;
     if (heartRateSamples!.length == chartDataMax) {
@@ -207,9 +177,8 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
         addedDataIndexes: <int>[powerActualSamples!.length - 1],
       );
     }
-    count = count + 1;
+    sampleCount = sampleCount + 1;
   }
-
 }
 
 class SampledData {

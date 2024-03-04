@@ -3,26 +3,30 @@ import 'dart:async';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../BluetoothUtils.dart';
+import 'HeartRateDevice.dart';
 
-class HeartRateBluetoothDevice {
+class BluetoothHeartRateDevice implements HeartRateDevice {
   BluetoothDevice bluetoothDevice;
 
-  HeartRateBluetoothDevice(this.bluetoothDevice);
+  BluetoothHeartRateDevice(this.bluetoothDevice);
 
   BluetoothCharacteristic? _bluetoothCharacteristic;
   StreamSubscription<List<int>>? _heartRateListener;
 
+  @override
   Future<void> connect() async {
     await bluetoothDevice.connect();
     List<BluetoothService> services = await bluetoothDevice.discoverServices();
     _bluetoothCharacteristic = BluetoothUtils.getHeartRateMeasurementCharacteristic(services)!;
   }
 
+  @override
   Future<void> disconnect() async {
     _heartRateListener?.cancel();
     await bluetoothDevice.disconnect();
   }
 
+  @override
   Stream<int> getListener() {
     if (_bluetoothCharacteristic == null) {
       throw Exception('Not connected to bluetooth device');

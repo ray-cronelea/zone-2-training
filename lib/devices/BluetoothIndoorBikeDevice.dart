@@ -4,17 +4,19 @@ import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../BluetoothUtils.dart';
+import 'IndoorBikeDevice.dart';
 
-class IndoorBikeBluetoothDevice {
+class BluetoothIndoorBikeDevice implements IndoorBikeDevice {
   BluetoothDevice bluetoothDevice;
 
-  IndoorBikeBluetoothDevice(this.bluetoothDevice);
+  BluetoothIndoorBikeDevice(this.bluetoothDevice);
 
   BluetoothCharacteristic? _cyclingPowerMeasurementCharacteristic;
   BluetoothCharacteristic? _fitnessMachineControlPointCharacteristic;
 
   StreamSubscription<List<int>>? _heartRateListener;
 
+  @override
   Future<void> connect() async {
     await bluetoothDevice.connect();
     List<BluetoothService> services = await bluetoothDevice.discoverServices();
@@ -24,11 +26,13 @@ class IndoorBikeBluetoothDevice {
     await writeRequestControl();
   }
 
+  @override
   Future<void> disconnect() async {
     _heartRateListener?.cancel();
     await bluetoothDevice.disconnect();
   }
 
+  @override
   Stream<int> getListener() {
     if (_cyclingPowerMeasurementCharacteristic == null) {
       throw Exception('Not connected to bluetooth device');
@@ -48,6 +52,7 @@ class IndoorBikeBluetoothDevice {
     return _fitnessMachineControlPointCharacteristic?.write([0]);
   }
 
+  @override
   Future<void> setTargetPower(int targetPower) async {
     // TODO: at the moment only one byte of power is sent so it will send a max value of 255
     //List<int> currentPowerSetpointBytes = toUint8List(currentPowerSetpoint);
