@@ -1,23 +1,35 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zone_2_training/preferences.dart';
 
 import 'BluetoothSelectionScreen.dart';
 import 'ExerciseScreen.dart';
 
 void main() {
+  var themeData = ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: Colors.green,
+      brightness: Brightness.dark,
+    ),
+  );
+
   if (Platform.isAndroid) {
     WidgetsFlutterBinding.ensureInitialized();
-    [Permission.location, Permission.bluetooth, Permission.bluetoothConnect, Permission.bluetoothScan].request().then((status) {
-      runApp(const MaterialApp(
+    [Permission.bluetooth, Permission.bluetoothConnect, Permission.bluetoothScan].request().then((status) {
+      runApp(MaterialApp(
+        theme: themeData,
         home: MyApp(),
       ));
     });
   } else {
-    runApp(const MaterialApp(
+    runApp(MaterialApp(
+      theme: themeData,
       home: MyApp(),
     ));
   }
@@ -27,16 +39,26 @@ class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  _MyAppState createState() => _MyAppState();
+  State<StatefulWidget> createState() {
+    return _MyAppState();
+  }
 }
 
 class _MyAppState extends State<MyApp> {
   BluetoothDevice? hrmBluetoothDevice;
   BluetoothDevice? indoorBikeBluetoothDevice;
 
+  late SharedPreferences prefs;
+
   @override
   void initState() {
     super.initState();
+    setUpPreferences();
+  }
+
+  Future<void> setUpPreferences() async {
+    prefs = await SharedPreferences.getInstance();
+    prefs.setBool(PreferenceConstants.SIM_MODE, false);
   }
 
   @override
@@ -46,22 +68,132 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Zone 2 Trainer'),
-        ),
-        body: Column(
-          children: [
-            _buildButtons(context),
-            const Divider(
-              color: Colors.blue,
-            ),
-            Text("Heart Rate Monitor Selected: ${hrmBluetoothDevice?.platformName}"),
-            Text("Indoor Bike Selected: ${indoorBikeBluetoothDevice?.platformName}"),
-          ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Zone 2 Trainer'),
+      ),
+      body: Column(
+        children: [
+          _buildCards(context),
+        ],
+      ),
+      bottomNavigationBar: BottomAppBar(
+        child: IconTheme(
+          data: IconThemeData(color: Theme.of(context).colorScheme.onPrimary),
+          child: Row(
+            children: <Widget>[
+              OutlinedButton(
+                child: const Icon(Icons.settings),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Devices not selected!')));
+                },
+              ),
+              const Spacer(),
+              const Spacer(),
+              OutlinedButton(
+                  onPressed: readyToStartActivity()
+                      ? () => _navigateToExercise(context)
+                      : () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Devices not selected!'))),
+                  child: const Text("Start", style: TextStyle(fontWeight: FontWeight.bold))),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  bool readyToStartActivity() => hrmSelected() && indoorBikeSelected();
+
+  Widget _buildCards(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
+          child: Card(
+            color: hrmBluetoothDevice == null ? Theme.of(context).colorScheme.errorContainer : Theme.of(context).colorScheme.secondaryContainer,
+            clipBehavior: Clip.hardEdge,
+            child: InkWell(
+              onTap: () => _navigateAndSelectHRMBluetoothDevice(context),
+              child: SizedBox(
+                height: 100,
+                width: double.infinity,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(15.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('Heart Rate Device', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Builder(builder: (context) {
+                              if (hrmBluetoothDevice == null) {
+                                return Text("Nothing selected");
+                              } else {
+                                return Text("Name: ${hrmBluetoothDevice?.platformName}");
+                              }
+                            }),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(15.0),
+                      child: Icon(Icons.monitor_heart),
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
+          child: Card(
+            color:
+                indoorBikeBluetoothDevice == null ? Theme.of(context).colorScheme.errorContainer : Theme.of(context).colorScheme.secondaryContainer,
+            clipBehavior: Clip.hardEdge,
+            child: InkWell(
+              onTap: () => _navigateAndSelectIndoorBikeBluetoothDevice(context),
+              child: SizedBox(
+                height: 100,
+                width: double.infinity,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(15.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Indoor Cycling Device',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Builder(builder: (context) {
+                              if (indoorBikeBluetoothDevice == null) {
+                                return Text("Nothing selected");
+                              } else {
+                                return Text("Name: ${indoorBikeBluetoothDevice?.platformName}");
+                              }
+                            }),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.all(15.0),
+                      child: Icon(Icons.directions_bike),
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -78,7 +210,7 @@ class _MyAppState extends State<MyApp> {
           onPressed: () => _navigateAndSelectIndoorBikeBluetoothDevice(context),
         ),
         ElevatedButton(
-          onPressed: hrmSelected() && indoorBikeSelected() ? () => _navigateToExercise(context) : null,
+          onPressed: readyToStartActivity() ? () => _navigateToExercise(context) : null,
           child: const Text('Start'),
         ),
       ],

@@ -43,6 +43,9 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
   @override
   void initState() {
     super.initState();
+    setState(() {
+      _scanResults = [];
+    });
     startListeningToBluetoothState();
     scanBluetoothDevices();
   }
@@ -64,12 +67,14 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
 
   void scanBluetoothDevices() {
     _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
-      _scanResults = results.where((scanResult) => scanResult.device.platformName.isNotEmpty).toList();
+      var scanResults = results.where((scanResult) => scanResult.device.platformName.isNotEmpty).toList();
       for (ScanResult r in results) {
         print('Platform name: ${r.device.platformName}, Device ID: ${r.device.remoteId.str}, RSSI: ${r.rssi}');
       }
       if (mounted) {
-        setState(() {});
+        setState(() {
+          _scanResults = scanResults;
+        });
       }
     });
     FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));

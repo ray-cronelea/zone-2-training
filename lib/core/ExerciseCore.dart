@@ -9,12 +9,12 @@ class ExerciseCore {
   final HeartRateDevice _heartRateBluetoothDevice;
   final IndoorBikeDevice _indoorBikeBluetoothDevice;
 
-  int heartRateTarget = 70;
+  int heartRateTarget = 140;
 
   ExerciseCore(this._heartRateBluetoothDevice, this._indoorBikeBluetoothDevice, {heartRateTarget});
 
-  PID? pid;
-  Timer? timer;
+  late PID pid;
+  late Timer timer;
 
   int _currentPowerSetpoint = 0;
   int _currentPowerActual = 0;
@@ -46,6 +46,7 @@ class ExerciseCore {
   Future<void> startReadingHeartRate() async {
     await _heartRateBluetoothDevice.connect();
     _heartRateBluetoothDevice.getListener().listen((value) {
+      print("Heart rate received $value");
       _heartRateValue = value;
     });
   }
@@ -53,7 +54,9 @@ class ExerciseCore {
   void performPeriodicTasks(Timer timer) {
     _currentPowerSetpoint = pid!(_heartRateValue.toDouble()).toInt();
     _indoorBikeBluetoothDevice.setTargetPower(_currentPowerSetpoint);
-    streamController.add(ExerciseSample(_currentPowerSetpoint, _currentPowerActual, _heartRateValue));
+    print("New power: $_currentPowerSetpoint");
+    var exerciseSample = ExerciseSample(_currentPowerSetpoint, _currentPowerActual, _heartRateValue);
+    streamController.add(exerciseSample);
   }
 
   void dispose() {
@@ -62,11 +65,11 @@ class ExerciseCore {
     timer?.cancel();
   }
 
-  int get heartRateValue => _heartRateValue;
-
-  set heartRateValue(int value) {
-    _heartRateValue = value;
+  void setHeartRateTarget(int value){
+    heartRateTarget = value;
+    pid.setPoint = heartRateTarget.toDouble();
   }
+
 }
 
 class ExerciseSample {
