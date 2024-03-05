@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:zone_2_training/preferences.dart';
 
 class BluetoothSelectionScreen extends StatefulWidget {
   const BluetoothSelectionScreen({super.key});
@@ -11,9 +12,9 @@ class BluetoothSelectionScreen extends StatefulWidget {
 }
 
 class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
-
   List<ScanResult> _scanResults = [];
   BluetoothAdapterState _bluetoothAdapterState = BluetoothAdapterState.unknown;
+  bool simMode = false;
 
   late StreamSubscription<List<ScanResult>> _scanResultsSubscription;
   late StreamSubscription<BluetoothAdapterState> _adapterStateSubscription;
@@ -29,6 +30,7 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             _buildBluetoothStatusMessage(context),
+            _buildSimButton(context),
             _buildListView(),
           ],
         ),
@@ -43,11 +45,15 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    setState(() {
-      _scanResults = [];
-    });
+
+    performSimModeTasks();
     startListeningToBluetoothState();
     scanBluetoothDevices();
+  }
+
+  Future<void> performSimModeTasks() async {
+    simMode = await Preferences.isSimMode();
+    setState(() {});
   }
 
   @override
@@ -59,10 +65,10 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
 
   void startListeningToBluetoothState() {
     _adapterStateSubscription = FlutterBluePlus.adapterState.listen((newAdapterState) {
-          setState(() {
-            _bluetoothAdapterState = newAdapterState;
-          });
-        });
+      setState(() {
+        _bluetoothAdapterState = newAdapterState;
+      });
+    });
   }
 
   void scanBluetoothDevices() {
@@ -106,6 +112,22 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
           );
         }
         return const Text("");
+      },
+    );
+  }
+
+  Widget _buildSimButton(BuildContext context) {
+    return Builder(
+      builder: (context) {
+        if (simMode) {
+          return OutlinedButton(
+              onPressed: () {
+                BluetoothDevice bluetoothDevice = BluetoothDevice.fromId("SIM_MODE");
+                return Navigator.pop(context, bluetoothDevice);
+              },
+              child: Text("Use Sim Device"));
+        }
+        return const SizedBox.shrink();
       },
     );
   }

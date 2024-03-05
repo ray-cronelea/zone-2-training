@@ -2,6 +2,9 @@ import 'dart:async';
 import 'IndoorBikeDevice.dart';
 
 class SimIndoorBikeDevice implements IndoorBikeDevice {
+
+  late Timer timer;
+
   SimIndoorBikeDevice(){
     asBroadcastStream = controller.stream.asBroadcastStream();
   }

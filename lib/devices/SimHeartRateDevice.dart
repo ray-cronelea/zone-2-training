@@ -5,8 +5,10 @@ class SimHeartRateDevice implements HeartRateDevice {
   StreamController<int> controller = StreamController<int>();
   int currentHeartRate = 50;
   int simPower = 195;
+  late Timer timer;
 
   SimHeartRateDevice(Stream<int> listener) {
+    timer = Timer.periodic(const Duration(seconds: 1), sendHeartRate);
     listener.listen((currentPower) {
       if (currentPower > simPower) {
         currentHeartRate++;
@@ -27,5 +29,9 @@ class SimHeartRateDevice implements HeartRateDevice {
   @override
   Stream<int> getListener() {
     return controller.stream.asBroadcastStream();
+  }
+
+  void sendHeartRate(Timer timer) {
+    controller.add(currentHeartRate);
   }
 }

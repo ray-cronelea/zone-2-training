@@ -1,37 +1,30 @@
 import 'dart:async';
-
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:keep_screen_on/keep_screen_on.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-import 'package:zone_2_training/devices/BluetoothHeartRateDevice.dart';
-import 'package:zone_2_training/devices/BluetoothIndoorBikeDevice.dart';
 import 'package:zone_2_training/devices/HeartRateDevice.dart';
 import 'package:zone_2_training/devices/IndoorBikeDevice.dart';
-import 'package:zone_2_training/preferences.dart';
-
 import 'core/ExerciseCore.dart';
-import 'devices/SimHeartRateDevice.dart';
-import 'devices/SimIndoorBikeDevice.dart';
 
 class ExerciseScreen extends StatefulWidget {
-  final BluetoothDevice hrmBluetoothDevice;
-  final BluetoothDevice indoorBikeBluetoothDevice;
+  final HeartRateDevice heartRateDevice;
+  final IndoorBikeDevice indoorBikeDevice;
 
-  const ExerciseScreen(this.hrmBluetoothDevice, this.indoorBikeBluetoothDevice, {super.key});
+  const ExerciseScreen(this.heartRateDevice, this.indoorBikeDevice, {super.key});
 
   @override
   State<StatefulWidget> createState() {
-    return _ExerciseScreenState(hrmBluetoothDevice, indoorBikeBluetoothDevice);
+    return _ExerciseScreenState(heartRateDevice, indoorBikeDevice);
   }
 }
 
 class _ExerciseScreenState extends State<ExerciseScreen> {
-  BluetoothDevice hrmBluetoothDevice;
-  BluetoothDevice indoorBikeBluetoothDevice;
+  HeartRateDevice heartRateDevice;
+  IndoorBikeDevice indoorBikeDevice;
 
-  _ExerciseScreenState(this.hrmBluetoothDevice, this.indoorBikeBluetoothDevice);
+  _ExerciseScreenState(this.heartRateDevice, this.indoorBikeDevice);
 
   late ExerciseCore _exerciseCore;
   late SharedPreferences prefs;
@@ -39,8 +32,9 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   int _currentPowerSetpoint = 0;
   int _currentPowerActual = 0;
   int _heartRateValue = 0;
-
   int _heartRateTarget = 140;
+
+  bool running = false;
 
   int sampleCount = 0;
   List<SampledData> heartRateSamples = <SampledData>[];
@@ -58,72 +52,138 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Exercise Session'),
+        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
           Text("Heart rate: $_heartRateValue"),
           Text("Actual Power: $_currentPowerActual"),
           Text("Current Power setpoint: $_currentPowerSetpoint"),
-          const Divider(),
-          buildChart(context),
-          Row(
-            children: [
-              IconButton(
-                  onPressed: () {
-                    _exerciseCore.heartRateTarget -= 1;
-                    _exerciseCore.setHeartRateTarget(_exerciseCore.heartRateTarget);
-                    setState(() {
-                      _heartRateTarget = _exerciseCore.heartRateTarget;
-                    });
-                  },
-                  icon: const Icon(Icons.arrow_back_sharp)),
-              Expanded(
-                child: Column(children: [
-                  const Text("Heart Rate Setpoint", style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text("$_heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold)),
-                ]),
-              ),
-              IconButton(
-                  onPressed: () {
-                    _exerciseCore.heartRateTarget += 1;
-                    _exerciseCore.setHeartRateTarget(_exerciseCore.heartRateTarget);
-                    setState(() {
-                      _heartRateTarget = _exerciseCore.heartRateTarget;
-                    });
-                  },
-                  icon: const Icon(Icons.arrow_forward_sharp)),
-            ],
+          Expanded(
+            child: Column(
+              children: [
+                buildPowerChart(context),
+                buildHeartRateChart(context),
+              ],
+            ),
+          ),
+          buildHeartRateSetpointController(),
+          Container(
+            height: 30,
           )
         ],
       ),
+      bottomNavigationBar: buildBottomAppBar(context),
     );
+  }
+
+  Row buildHeartRateSetpointController() {
+    return Row(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
+          child: IconButton.outlined(
+              onPressed: () {
+                _exerciseCore.heartRateTarget -= 1;
+                _exerciseCore.setHeartRateTarget(_exerciseCore.heartRateTarget);
+                setState(() {
+                  _heartRateTarget = _exerciseCore.heartRateTarget;
+                });
+              },
+              icon: Transform.scale(scale: 2.0, child: Icon(Icons.remove))),
+        ),
+        Expanded(
+          child: Column(children: [
+            Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: const Text("Heart Rate Setpoint", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            Transform.scale(scale: 2.0, child: Text("$_heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold))),
+            Text("bpm", style: const TextStyle(fontWeight: FontWeight.bold)),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
+          child: IconButton.outlined(
+              onPressed: () {
+                _exerciseCore.heartRateTarget += 1;
+                _exerciseCore.setHeartRateTarget(_exerciseCore.heartRateTarget);
+                setState(() {
+                  _heartRateTarget = _exerciseCore.heartRateTarget;
+                });
+              },
+              icon: Transform.scale(scale: 2.0, child: Icon(Icons.add))),
+        ),
+      ],
+    );
+  }
+
+  // return Navigator.pop(context);
+
+  BottomAppBar buildBottomAppBar(BuildContext context) {
+    return BottomAppBar(
+      child: IconTheme(
+        data: IconThemeData(color: Theme
+            .of(context)
+            .colorScheme
+            .onPrimary),
+        child: Row(
+          children: <Widget>[
+            OutlinedButton(
+              child: const Icon(Icons.stop),
+              onPressed: () async {
+                return await showStopDialog(context);
+              },
+            ),
+            const Spacer(),
+            const Text("Ready to start"),
+            const Spacer(),
+            OutlinedButton(
+                child: const Icon(Icons.play_arrow_outlined),
+                onPressed: () {
+                  startRuntime();
+                }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  showStopDialog(BuildContext context) async {
+    bool? closeScreen = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) =>
+          AlertDialog(
+            content: const Text('Are you sure you want to finish the exercise?'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Yes'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('No'),
+              ),
+            ],
+          ),
+    );
+    if (closeScreen ?? false) {
+      return Navigator.pop(context);
+    }
+    return;
   }
 
   @override
   void initState() {
     super.initState();
     KeepScreenOn.turnOn();
-    startRuntime();
+    initRuntime();
   }
 
-  Future<void> startRuntime() async {
-
-    HeartRateDevice heartRateDevice;
-    IndoorBikeDevice indoorBikeDevice;
-
-    prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(Preferences.SIM_MODE) ?? true) {
-      print("SIM MODE ENABLED");
-      indoorBikeDevice = SimIndoorBikeDevice();
-      heartRateDevice = SimHeartRateDevice(indoorBikeDevice.getListener());
-    } else {
-      indoorBikeDevice = BluetoothIndoorBikeDevice(indoorBikeBluetoothDevice);
-      heartRateDevice = BluetoothHeartRateDevice(hrmBluetoothDevice);
-    }
-
+  Future<void> initRuntime() async {
     _exerciseCore = ExerciseCore(heartRateDevice, indoorBikeDevice, heartRateTarget: _heartRateTarget);
 
-    Stream<ExerciseData> exerciseDataStream = _exerciseCore.start();
+    Stream<ExerciseData> exerciseDataStream = _exerciseCore.init();
     exerciseDataStream.listen((exerciseSample) {
       setState(() {
         _heartRateValue = exerciseSample.heartRateValue;
@@ -134,6 +194,14 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     });
   }
 
+  void startRuntime() {
+    _exerciseCore.start();
+  }
+
+  void pauseRuntime() {
+    _exerciseCore.pause();
+  }
+
   @override
   void dispose() {
     KeepScreenOn.turnOff();
@@ -141,54 +209,69 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     super.dispose();
   }
 
-  Widget buildChart(BuildContext context) {
-    return SfCartesianChart(
-        plotAreaBorderWidth: 0,
-        primaryXAxis: const NumericAxis(majorGridLines: MajorGridLines(width: 0)),
-        primaryYAxis: const NumericAxis(maximum: 250, axisLine: AxisLine(width: 0), majorTickLines: MajorTickLines(size: 0)),
-        series: <LineSeries<SampledData, int>>[
-          LineSeries<SampledData, int>(
-            onRendererCreated: (ChartSeriesController<SampledData, int> controller) {
-              _heartRateChartSeriesController = controller;
-            },
-            dataSource: heartRateSamples,
-            color: Colors.red,
-            xValueMapper: (SampledData data, _) => data.sampleNumber,
-            yValueMapper: (SampledData data, _) => data.value,
-            animationDuration: 0,
-          ),
-          LineSeries<SampledData, int>(
-            onRendererCreated: (ChartSeriesController<SampledData, int> controller) {
-              _powerSetPointChartSeriesController = controller;
-            },
-            dataSource: powerSetPointSamples,
-            color: Colors.blue,
-            xValueMapper: (SampledData data, _) => data.sampleNumber,
-            yValueMapper: (SampledData data, _) => data.value,
-            animationDuration: 0,
-          ),
-          LineSeries<SampledData, int>(
-            onRendererCreated: (ChartSeriesController<SampledData, int> controller) {
-              _powerAcutalChartSeriesController = controller;
-            },
-            dataSource: powerActualSamples,
-            color: Colors.green,
-            xValueMapper: (SampledData data, _) => data.sampleNumber,
-            yValueMapper: (SampledData data, _) => data.value,
-            animationDuration: 0,
-          ),
-          LineSeries<SampledData, int>(
-            onRendererCreated: (ChartSeriesController<SampledData, int> controller) {
-              _heartRateTargetChartSeriesController = controller;
-            },
-            dataSource: heartRateTargetSamples,
-            color: Colors.red,
-            dashArray: const <double>[4, 5],
-            xValueMapper: (SampledData data, _) => data.sampleNumber,
-            yValueMapper: (SampledData data, _) => data.value,
-            animationDuration: 0,
-          ),
-        ]);
+  Widget buildPowerChart(BuildContext context) {
+    return Container(
+      height: 250,
+      child: SfCartesianChart(
+          plotAreaBorderWidth: 0,
+          primaryXAxis: const NumericAxis(majorGridLines: MajorGridLines(width: 0)),
+          primaryYAxis: const NumericAxis(maximum: 250, axisLine: AxisLine(width: 0), majorTickLines: MajorTickLines(size: 0)),
+          series: <LineSeries<SampledData, int>>[
+            LineSeries<SampledData, int>(
+              onRendererCreated: (ChartSeriesController<SampledData, int> controller) {
+                _powerSetPointChartSeriesController = controller;
+              },
+              dataSource: powerSetPointSamples,
+              color: Colors.blue,
+              xValueMapper: (SampledData data, _) => data.sampleNumber,
+              yValueMapper: (SampledData data, _) => data.value,
+              animationDuration: 0,
+            ),
+            LineSeries<SampledData, int>(
+              onRendererCreated: (ChartSeriesController<SampledData, int> controller) {
+                _powerAcutalChartSeriesController = controller;
+              },
+              dataSource: powerActualSamples,
+              color: Colors.green,
+              xValueMapper: (SampledData data, _) => data.sampleNumber,
+              yValueMapper: (SampledData data, _) => data.value,
+              animationDuration: 0,
+            ),
+          ]),
+    );
+  }
+
+  Widget buildHeartRateChart(BuildContext context) {
+    return Container(
+      height: 250,
+      child: SfCartesianChart(
+          plotAreaBorderWidth: 0,
+          primaryXAxis: const NumericAxis(majorGridLines: MajorGridLines(width: 0)),
+          primaryYAxis: const NumericAxis(maximum: 200, axisLine: AxisLine(width: 0), majorTickLines: MajorTickLines(size: 0)),
+          series: <LineSeries<SampledData, int>>[
+            LineSeries<SampledData, int>(
+              onRendererCreated: (ChartSeriesController<SampledData, int> controller) {
+                _heartRateChartSeriesController = controller;
+              },
+              dataSource: heartRateSamples,
+              color: Colors.red,
+              xValueMapper: (SampledData data, _) => data.sampleNumber,
+              yValueMapper: (SampledData data, _) => data.value,
+              animationDuration: 0,
+            ),
+            LineSeries<SampledData, int>(
+              onRendererCreated: (ChartSeriesController<SampledData, int> controller) {
+                _heartRateTargetChartSeriesController = controller;
+              },
+              dataSource: heartRateTargetSamples,
+              color: Colors.red,
+              dashArray: const <double>[4, 5],
+              xValueMapper: (SampledData data, _) => data.sampleNumber,
+              yValueMapper: (SampledData data, _) => data.value,
+              animationDuration: 0,
+            ),
+          ]),
+    );
   }
 
   void updateChart() {

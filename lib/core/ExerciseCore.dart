@@ -25,15 +25,21 @@ class ExerciseCore {
 
   StreamController<ExerciseData> streamController = StreamController<ExerciseData>();
 
-  Stream<ExerciseData> start() {
+  Stream<ExerciseData> init() {
     pid = PID(Kp: 1, Ki: 0.1, Kd: 0.05, setPoint: heartRateTarget.toDouble(), minOutput: minPower, maxOutput: maxPower);
 
     startReadingHeartRate();
     startReadingAcutalPower();
-
-    timer = Timer.periodic(const Duration(seconds: 1), performPeriodicTasks);
-
+    setPower(minPower.toInt());
     return streamController.stream;
+  }
+
+  void start() {
+    timer = Timer.periodic(const Duration(seconds: 1), performPeriodicTasks);
+  }
+
+  void pause() {
+    timer.cancel();
   }
 
   Future<void> startReadingAcutalPower() async {
@@ -53,10 +59,14 @@ class ExerciseCore {
 
   void performPeriodicTasks(Timer timer) {
     _currentPowerSetpoint = pid(_heartRateValue.toDouble()).toInt();
-    _indoorBikeBluetoothDevice.setTargetPower(_currentPowerSetpoint);
-    print("New power: $_currentPowerSetpoint");
+    setPower(_currentPowerSetpoint);
     var exerciseSample = ExerciseData(_currentPowerSetpoint, _currentPowerActual, _heartRateValue);
+    print("Periodic data: $_currentPowerSetpoint $_currentPowerActual $_heartRateValue");
     streamController.add(exerciseSample);
+  }
+
+  void setPower(int power) {
+    _indoorBikeBluetoothDevice.setTargetPower(power);
   }
 
   void dispose() {
@@ -65,11 +75,10 @@ class ExerciseCore {
     timer.cancel();
   }
 
-  void setHeartRateTarget(int value){
+  void setHeartRateTarget(int value) {
     heartRateTarget = value;
     pid.setPoint = heartRateTarget.toDouble();
   }
-
 }
 
 class ExerciseData {

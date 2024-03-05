@@ -6,9 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:zone_2_training/SettingsScreen.dart';
+import 'package:zone_2_training/preferences.dart';
 
 import 'BluetoothSelectionScreen.dart';
 import 'ExerciseScreen.dart';
+import 'devices/BluetoothHeartRateDevice.dart';
+import 'devices/BluetoothIndoorBikeDevice.dart';
+import 'devices/HeartRateDevice.dart';
+import 'devices/IndoorBikeDevice.dart';
+import 'devices/SimHeartRateDevice.dart';
+import 'devices/SimIndoorBikeDevice.dart';
 
 void main() {
   var themeData = ThemeData(
@@ -82,7 +89,7 @@ class _MyAppState extends State<MyApp> {
               const Spacer(),
               const Spacer(),
               OutlinedButton(
-                  onPressed: readyToStartActivity()
+                  onPressed: isReadyToStartActivity()
                       ? () => _navigateToExercise(context)
                       : () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Devices not selected!'))),
                   child: const Text("Start", style: TextStyle(fontWeight: FontWeight.bold))),
@@ -93,7 +100,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  bool readyToStartActivity() => hrmSelected() && indoorBikeSelected();
+  bool isReadyToStartActivity() => hrmSelected() && indoorBikeSelected();
 
   Widget _buildCards(BuildContext context) {
     return Column(
@@ -211,9 +218,21 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _navigateToExercise(BuildContext context) async {
+    HeartRateDevice heartRateDevice;
+    IndoorBikeDevice indoorBikeDevice;
+
+    if (await Preferences.isSimMode()) {
+      print("SIM MODE ENABLED");
+      indoorBikeDevice = SimIndoorBikeDevice();
+      heartRateDevice = SimHeartRateDevice(indoorBikeDevice.getListener());
+    } else {
+      indoorBikeDevice = BluetoothIndoorBikeDevice(indoorBikeBluetoothDevice!);
+      heartRateDevice = BluetoothHeartRateDevice(hrmBluetoothDevice!);
+    }
+
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ExerciseScreen(hrmBluetoothDevice!, indoorBikeBluetoothDevice!)),
+      MaterialPageRoute(builder: (context) => ExerciseScreen(heartRateDevice, indoorBikeDevice)),
     );
   }
 
