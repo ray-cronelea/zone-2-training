@@ -84,7 +84,8 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
           const Text("Heart Rate", style: TextStyle(fontWeight: FontWeight.normal)),
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Transform.scale(scale: 2.0, child: Text("$_heartRateValue", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red))),
+            child:
+                Transform.scale(scale: 2.0, child: Text("$_heartRateValue", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red))),
           ),
           Text("BPM", style: const TextStyle(fontWeight: FontWeight.normal)),
         ]),
@@ -92,7 +93,8 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
           const Text("Power", style: TextStyle(fontWeight: FontWeight.normal)),
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Transform.scale(scale: 2.0, child: Text("$_heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
+            child: Transform.scale(
+                scale: 2.0, child: Text("$_heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
           ),
           Text("WATT", style: const TextStyle(fontWeight: FontWeight.normal)),
         ]),
@@ -120,9 +122,10 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
             const Text("Setpoint", style: TextStyle(fontWeight: FontWeight.bold)),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Transform.scale(scale: 2.0, child: Text("$_heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold))),
+              child: Transform.scale(
+                  scale: 2.0, child: Text("$_heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange))),
             ),
-            Text("bpm", style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text("BPM", style: const TextStyle(fontWeight: FontWeight.bold)),
           ]),
         ),
         Padding(
@@ -156,13 +159,29 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
               },
             ),
             const Spacer(),
-            const Text("Ready to start"),
+            Builder(builder: (context) {
+              if (running) {
+                return Text("Running");
+              } else {
+                return Text("Paused");
+              }
+            }),
             const Spacer(),
-            OutlinedButton(
-                child: const Icon(Icons.play_arrow_outlined),
-                onPressed: () {
-                  startRuntime();
-                }),
+            Builder(builder: (context) {
+              if (running) {
+                return OutlinedButton(
+                    child: const Icon(Icons.pause_outlined),
+                    onPressed: () {
+                      pauseRuntime();
+                    });
+              } else {
+                return OutlinedButton(
+                    child: const Icon(Icons.play_arrow_outlined),
+                    onPressed: () {
+                      startRuntime();
+                    });
+              }
+            }),
           ],
         ),
       ),
@@ -215,10 +234,16 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
 
   void startRuntime() {
     _exerciseCore.start();
+    setState(() {
+      running = true;
+    });
   }
 
   void pauseRuntime() {
     _exerciseCore.pause();
+    setState(() {
+      running = false;
+    });
   }
 
   @override
@@ -232,6 +257,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     return SizedBox(
       height: 250,
       child: SfCartesianChart(
+          annotations: [CartesianChartAnnotation(widget: Text("Power"), x: "50%", y: "80%", coordinateUnit : CoordinateUnit.percentage,)],
           plotAreaBorderWidth: 0,
           primaryXAxis: const NumericAxis(majorGridLines: MajorGridLines(width: 0)),
           primaryYAxis: const NumericAxis(maximum: 250, axisLine: AxisLine(width: 0), majorTickLines: MajorTickLines(size: 0)),
@@ -264,6 +290,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     return SizedBox(
       height: 250,
       child: SfCartesianChart(
+          annotations: [CartesianChartAnnotation(widget: Text("Heart Rate"), x: "50%", y: "80%", coordinateUnit : CoordinateUnit.percentage,)],
           plotAreaBorderWidth: 0,
           primaryXAxis: const NumericAxis(majorGridLines: MajorGridLines(width: 0)),
           primaryYAxis: const NumericAxis(maximum: 200, axisLine: AxisLine(width: 0), majorTickLines: MajorTickLines(size: 0)),
@@ -283,8 +310,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
                 _heartRateTargetChartSeriesController = controller;
               },
               dataSource: heartRateTargetSamples,
-              color: Colors.red,
-              dashArray: const <double>[4, 5],
+              color: Colors.orange,
               xValueMapper: (SampledData data, _) => data.sampleNumber,
               yValueMapper: (SampledData data, _) => data.value,
               animationDuration: 0,
