@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:zone_2_training/devices/BluetoothHeartRateDevice.dart';
 import 'package:zone_2_training/devices/BluetoothIndoorBikeDevice.dart';
+import 'package:zone_2_training/devices/HeartRateDevice.dart';
+import 'package:zone_2_training/devices/IndoorBikeDevice.dart';
 import 'package:zone_2_training/preferences.dart';
 
 import 'core/ExerciseCore.dart';
@@ -20,7 +22,9 @@ class ExerciseScreen extends StatefulWidget {
   const ExerciseScreen(this.hrmBluetoothDevice, this.indoorBikeBluetoothDevice, {super.key});
 
   @override
-  _ExerciseScreenState createState() => _ExerciseScreenState(hrmBluetoothDevice, indoorBikeBluetoothDevice);
+  State<StatefulWidget> createState() {
+    return _ExerciseScreenState(hrmBluetoothDevice, indoorBikeBluetoothDevice);
+  }
 }
 
 class _ExerciseScreenState extends State<ExerciseScreen> {
@@ -103,18 +107,24 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   }
 
   Future<void> startRuntime() async {
+
+    HeartRateDevice heartRateDevice;
+    IndoorBikeDevice indoorBikeDevice;
+
     prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(PreferenceConstants.SIM_MODE) ?? true) {
+    if (prefs.getBool(Preferences.SIM_MODE) ?? true) {
       print("SIM MODE ENABLED");
-      var simIndoorBikeDevice = SimIndoorBikeDevice();
-      var simHeartRateDevice = SimHeartRateDevice(simIndoorBikeDevice.getListener());
-      _exerciseCore = ExerciseCore(simHeartRateDevice, simIndoorBikeDevice, heartRateTarget: _heartRateTarget);
+      indoorBikeDevice = SimIndoorBikeDevice();
+      heartRateDevice = SimHeartRateDevice(indoorBikeDevice.getListener());
     } else {
-      _exerciseCore = ExerciseCore(BluetoothHeartRateDevice(hrmBluetoothDevice), BluetoothIndoorBikeDevice(indoorBikeBluetoothDevice),
-          heartRateTarget: _heartRateTarget);
+      indoorBikeDevice = BluetoothIndoorBikeDevice(indoorBikeBluetoothDevice);
+      heartRateDevice = BluetoothHeartRateDevice(hrmBluetoothDevice);
     }
-    Stream<ExerciseSample> exerciseSampleStream = _exerciseCore.start();
-    exerciseSampleStream.listen((exerciseSample) {
+
+    _exerciseCore = ExerciseCore(heartRateDevice, indoorBikeDevice, heartRateTarget: _heartRateTarget);
+
+    Stream<ExerciseData> exerciseDataStream = _exerciseCore.start();
+    exerciseDataStream.listen((exerciseSample) {
       setState(() {
         _heartRateValue = exerciseSample.heartRateValue;
         _currentPowerActual = exerciseSample.powerActual;

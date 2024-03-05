@@ -5,8 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:zone_2_training/preferences.dart';
+import 'package:zone_2_training/SettingsScreen.dart';
 
 import 'BluetoothSelectionScreen.dart';
 import 'ExerciseScreen.dart';
@@ -48,17 +47,9 @@ class _MyAppState extends State<MyApp> {
   BluetoothDevice? hrmBluetoothDevice;
   BluetoothDevice? indoorBikeBluetoothDevice;
 
-  late SharedPreferences prefs;
-
   @override
   void initState() {
     super.initState();
-    setUpPreferences();
-  }
-
-  Future<void> setUpPreferences() async {
-    prefs = await SharedPreferences.getInstance();
-    prefs.setBool(PreferenceConstants.SIM_MODE, false);
   }
 
   @override
@@ -85,7 +76,7 @@ class _MyAppState extends State<MyApp> {
               OutlinedButton(
                 child: const Icon(Icons.settings),
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Devices not selected!')));
+                  _navigateToSettings(context);
                 },
               ),
               const Spacer(),
@@ -197,26 +188,6 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  Widget _buildButtons(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: <Widget>[
-        ElevatedButton(
-          child: const Text('Pick HRM'),
-          onPressed: () => _navigateAndSelectHRMBluetoothDevice(context),
-        ),
-        ElevatedButton(
-          child: const Text('Pick Indoor Bike'),
-          onPressed: () => _navigateAndSelectIndoorBikeBluetoothDevice(context),
-        ),
-        ElevatedButton(
-          onPressed: readyToStartActivity() ? () => _navigateToExercise(context) : null,
-          child: const Text('Start'),
-        ),
-      ],
-    );
-  }
-
   bool hrmSelected() => hrmBluetoothDevice != null;
 
   bool indoorBikeSelected() => indoorBikeBluetoothDevice != null;
@@ -243,6 +214,13 @@ class _MyAppState extends State<MyApp> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => ExerciseScreen(hrmBluetoothDevice!, indoorBikeBluetoothDevice!)),
+    );
+  }
+
+  Future<void> _navigateToSettings(BuildContext context) async {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => SettingsScreen()),
     );
   }
 }
