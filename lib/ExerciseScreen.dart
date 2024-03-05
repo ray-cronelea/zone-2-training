@@ -44,7 +44,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
 
   ChartSeriesController<SampledData, int>? _heartRateChartSeriesController;
   ChartSeriesController<SampledData, int>? _powerSetPointChartSeriesController;
-  ChartSeriesController<SampledData, int>? _powerAcutalChartSeriesController;
+  ChartSeriesController<SampledData, int>? _powerActualChartSeriesController;
   ChartSeriesController<SampledData, int>? _heartRateTargetChartSeriesController;
 
   @override
@@ -56,24 +56,47 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
       ),
       body: Column(
         children: [
-          Text("Heart rate: $_heartRateValue"),
-          Text("Actual Power: $_currentPowerActual"),
-          Text("Current Power setpoint: $_currentPowerSetpoint"),
+          buildTopDetail(),
           Expanded(
             child: Column(
               children: [
                 buildPowerChart(context),
+                Container(
+                  height: 10,
+                ),
                 buildHeartRateChart(context),
               ],
             ),
           ),
           buildHeartRateSetpointController(),
-          Container(
-            height: 30,
-          )
+          Container(height: 30)
         ],
       ),
       bottomNavigationBar: buildBottomAppBar(context),
+    );
+  }
+
+  Widget buildTopDetail() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        Column(children: [
+          const Text("Heart Rate", style: TextStyle(fontWeight: FontWeight.normal)),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Transform.scale(scale: 2.0, child: Text("$_heartRateValue", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red))),
+          ),
+          Text("BPM", style: const TextStyle(fontWeight: FontWeight.normal)),
+        ]),
+        Column(children: [
+          const Text("Power", style: TextStyle(fontWeight: FontWeight.normal)),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Transform.scale(scale: 2.0, child: Text("$_heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
+          ),
+          Text("WATT", style: const TextStyle(fontWeight: FontWeight.normal)),
+        ]),
+      ],
     );
   }
 
@@ -81,7 +104,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     return Row(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: IconButton.outlined(
               onPressed: () {
                 _exerciseCore.heartRateTarget -= 1;
@@ -94,16 +117,16 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
         ),
         Expanded(
           child: Column(children: [
+            const Text("Setpoint", style: TextStyle(fontWeight: FontWeight.bold)),
             Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: const Text("Heart Rate Setpoint", style: TextStyle(fontWeight: FontWeight.bold)),
+              padding: const EdgeInsets.all(8.0),
+              child: Transform.scale(scale: 2.0, child: Text("$_heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold))),
             ),
-            Transform.scale(scale: 2.0, child: Text("$_heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold))),
             Text("bpm", style: const TextStyle(fontWeight: FontWeight.bold)),
           ]),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: IconButton.outlined(
               onPressed: () {
                 _exerciseCore.heartRateTarget += 1;
@@ -123,10 +146,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   BottomAppBar buildBottomAppBar(BuildContext context) {
     return BottomAppBar(
       child: IconTheme(
-        data: IconThemeData(color: Theme
-            .of(context)
-            .colorScheme
-            .onPrimary),
+        data: IconThemeData(color: Theme.of(context).colorScheme.onPrimary),
         child: Row(
           children: <Widget>[
             OutlinedButton(
@@ -152,20 +172,19 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   showStopDialog(BuildContext context) async {
     bool? closeScreen = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) =>
-          AlertDialog(
-            content: const Text('Are you sure you want to finish the exercise?'),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Yes'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('No'),
-              ),
-            ],
+      builder: (BuildContext context) => AlertDialog(
+        content: const Text('Are you sure you want to finish the exercise?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+        ],
+      ),
     );
     if (closeScreen ?? false) {
       return Navigator.pop(context);
@@ -210,7 +229,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   }
 
   Widget buildPowerChart(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 250,
       child: SfCartesianChart(
           plotAreaBorderWidth: 0,
@@ -229,7 +248,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
             ),
             LineSeries<SampledData, int>(
               onRendererCreated: (ChartSeriesController<SampledData, int> controller) {
-                _powerAcutalChartSeriesController = controller;
+                _powerActualChartSeriesController = controller;
               },
               dataSource: powerActualSamples,
               color: Colors.green,
@@ -242,7 +261,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   }
 
   Widget buildHeartRateChart(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 250,
       child: SfCartesianChart(
           plotAreaBorderWidth: 0,
@@ -305,12 +324,12 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     }
     if (powerActualSamples.length == chartDataMax) {
       powerActualSamples.removeAt(0);
-      _powerAcutalChartSeriesController?.updateDataSource(
+      _powerActualChartSeriesController?.updateDataSource(
         addedDataIndexes: <int>[powerActualSamples.length - 1],
         removedDataIndexes: <int>[0],
       );
     } else {
-      _powerAcutalChartSeriesController?.updateDataSource(
+      _powerActualChartSeriesController?.updateDataSource(
         addedDataIndexes: <int>[powerActualSamples.length - 1],
       );
     }
