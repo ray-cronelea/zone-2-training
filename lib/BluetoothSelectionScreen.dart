@@ -37,7 +37,7 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.refresh),
-        onPressed: () => scanBluetoothDevices,
+        onPressed: () => scanBluetoothDevices(),
       ),
     );
   }

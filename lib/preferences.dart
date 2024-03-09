@@ -1,17 +1,24 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Preferences {
-  static const String SIM_MODE = "SIM MODE";
+  static const String BOOL_SIM_MODE = "SIM MODE";
+  static const String INT_MAX_HEARTRATE = "MAX HEART RATE";
+
   static final Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
 
   static saveSimMode(bool simMode) async {
     SharedPreferences pref = await _prefs;
-    pref.setBool(SIM_MODE, simMode).then((value) => print('Did setBool write: $value'));
+    pref.setBool(BOOL_SIM_MODE, simMode).then((value) => print('saveSimMode was successful: $value'));
+  }
+
+  static saveMaxHeartRate(int maxHeartRate) async {
+    SharedPreferences pref = await _prefs;
+    pref.setInt(INT_MAX_HEARTRATE, maxHeartRate).then((value) => print('saveMaxHeartRate was successful: $value'));
   }
 
   static Future<bool> isSimMode() async {
     SharedPreferences pref = await _prefs;
-    bool? simMode = pref.getBool(SIM_MODE);
+    bool? simMode = pref.getBool(BOOL_SIM_MODE);
 
     print('Sim mode value read : $simMode');
 
@@ -21,5 +28,19 @@ class Preferences {
 
     print("No value read from saved preferences. Returning default");
     return false;
+  }
+
+  static Future<int> getMaxHeartRate() async {
+    SharedPreferences pref = await _prefs;
+    int? maxHeartRate = pref.getInt(INT_MAX_HEARTRATE);
+
+    print('INT_MAX_HEARTRATE value read : $maxHeartRate');
+
+    if (maxHeartRate != null) {
+      return maxHeartRate;
+    }
+
+    print("No value read from saved preferences. Returning default");
+    return 180;
   }
 }

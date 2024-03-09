@@ -9,19 +9,19 @@ class ExerciseCore {
   final HeartRateDevice _heartRateBluetoothDevice;
   final IndoorBikeDevice _indoorBikeBluetoothDevice;
 
-  int heartRateTarget = 140;
+  int heartRateTarget = 125;
 
   ExerciseCore(this._heartRateBluetoothDevice, this._indoorBikeBluetoothDevice, {heartRateTarget});
 
   late PID pid;
-  late Timer timer;
+  Timer? timer;
 
   int _currentPowerSetpoint = 0;
   int _currentPowerActual = 0;
   int _heartRateValue = 0;
 
   double minPower = 100;
-  double maxPower = 220;
+  double maxPower = 250;
 
   StreamController<ExerciseData> streamController = StreamController<ExerciseData>();
 
@@ -39,7 +39,9 @@ class ExerciseCore {
   }
 
   void pause() {
-    timer.cancel();
+    if (timer!= null){
+      timer!.cancel();
+    }
   }
 
   Future<void> startReadingAcutalPower() async {
@@ -72,7 +74,7 @@ class ExerciseCore {
   void dispose() {
     _heartRateBluetoothDevice.disconnect();
     _indoorBikeBluetoothDevice.disconnect();
-    timer.cancel();
+    pause();
   }
 
   void setHeartRateTarget(int value) {

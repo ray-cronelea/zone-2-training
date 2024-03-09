@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:zone_2_training/devices/HeartRateDevice.dart';
 import 'package:zone_2_training/devices/IndoorBikeDevice.dart';
+import 'package:zone_2_training/preferences.dart';
 import 'core/ExerciseCore.dart';
 
 class ExerciseScreen extends StatefulWidget {
@@ -192,15 +193,22 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     bool? closeScreen = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        content: const Text('Are you sure you want to finish the exercise?'),
+        title: Text(
+          "Closing...",
+          textAlign: TextAlign.center,
+        ),
+        content: const Text(
+          'Are you sure you want to leave this screen?',
+          textAlign: TextAlign.center,
+        ),
         actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Yes'),
-          ),
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes'),
           ),
         ],
       ),
@@ -219,7 +227,15 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   }
 
   Future<void> initRuntime() async {
-    _exerciseCore = ExerciseCore(heartRateDevice, indoorBikeDevice, heartRateTarget: _heartRateTarget);
+    int maxHeartRate = await Preferences.getMaxHeartRate();
+    int zone2HeartRate = (maxHeartRate * 0.65).toInt();
+    print(zone2HeartRate);
+
+    setState(() {
+      _heartRateTarget = zone2HeartRate;
+    });
+
+    _exerciseCore = ExerciseCore(heartRateDevice, indoorBikeDevice, heartRateTarget: zone2HeartRate);
 
     Stream<ExerciseData> exerciseDataStream = _exerciseCore.init();
     exerciseDataStream.listen((exerciseSample) {
@@ -257,7 +273,14 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     return SizedBox(
       height: 250,
       child: SfCartesianChart(
-          annotations: [CartesianChartAnnotation(widget: Text("Power"), x: "50%", y: "80%", coordinateUnit : CoordinateUnit.percentage,)],
+          annotations: [
+            CartesianChartAnnotation(
+              widget: Text("Power"),
+              x: "50%",
+              y: "80%",
+              coordinateUnit: CoordinateUnit.percentage,
+            )
+          ],
           plotAreaBorderWidth: 0,
           primaryXAxis: const NumericAxis(majorGridLines: MajorGridLines(width: 0)),
           primaryYAxis: const NumericAxis(maximum: 250, axisLine: AxisLine(width: 0), majorTickLines: MajorTickLines(size: 0)),
@@ -290,7 +313,14 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     return SizedBox(
       height: 250,
       child: SfCartesianChart(
-          annotations: [CartesianChartAnnotation(widget: Text("Heart Rate"), x: "50%", y: "80%", coordinateUnit : CoordinateUnit.percentage,)],
+          annotations: [
+            CartesianChartAnnotation(
+              widget: Text("Heart Rate"),
+              x: "50%",
+              y: "80%",
+              coordinateUnit: CoordinateUnit.percentage,
+            )
+          ],
           plotAreaBorderWidth: 0,
           primaryXAxis: const NumericAxis(majorGridLines: MajorGridLines(width: 0)),
           primaryYAxis: const NumericAxis(maximum: 200, axisLine: AxisLine(width: 0), majorTickLines: MajorTickLines(size: 0)),
