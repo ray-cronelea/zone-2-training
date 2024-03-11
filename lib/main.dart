@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -51,12 +52,17 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  BluetoothDevice? hrmBluetoothDevice;
-  BluetoothDevice? indoorBikeBluetoothDevice;
+  BluetoothDeviceData? hrmBluetoothDeviceData;
+  BluetoothDeviceData? indoorBikeBluetoothDeviceData;
 
   @override
   void initState() {
     super.initState();
+    initBluetooth();
+  }
+
+  Future<void> initBluetooth() async {
+    await CentralManager.instance.setUp();
   }
 
   @override
@@ -108,7 +114,7 @@ class _MyAppState extends State<MyApp> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
           child: Card(
-            color: hrmBluetoothDevice == null ? Theme.of(context).colorScheme.errorContainer : Theme.of(context).colorScheme.secondaryContainer,
+            color: hrmBluetoothDeviceData == null ? Theme.of(context).colorScheme.errorContainer : Theme.of(context).colorScheme.secondaryContainer,
             clipBehavior: Clip.hardEdge,
             child: InkWell(
               onTap: () => _navigateAndSelectHRMBluetoothDevice(context),
@@ -126,10 +132,10 @@ class _MyAppState extends State<MyApp> {
                           children: [
                             Text('Heart Rate Device', style: TextStyle(fontWeight: FontWeight.bold)),
                             Builder(builder: (context) {
-                              if (hrmBluetoothDevice == null) {
+                              if (hrmBluetoothDeviceData == null) {
                                 return Text("Nothing selected");
                               } else {
-                                return Text("Name: ${hrmBluetoothDevice?.platformName}");
+                                return Text("Name: ${hrmBluetoothDeviceData?.deviceName}");
                               }
                             }),
                           ],
@@ -150,7 +156,7 @@ class _MyAppState extends State<MyApp> {
           padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
           child: Card(
             color:
-                indoorBikeBluetoothDevice == null ? Theme.of(context).colorScheme.errorContainer : Theme.of(context).colorScheme.secondaryContainer,
+                indoorBikeBluetoothDeviceData == null ? Theme.of(context).colorScheme.errorContainer : Theme.of(context).colorScheme.secondaryContainer,
             clipBehavior: Clip.hardEdge,
             child: InkWell(
               onTap: () => _navigateAndSelectIndoorBikeBluetoothDevice(context),
@@ -171,10 +177,10 @@ class _MyAppState extends State<MyApp> {
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             Builder(builder: (context) {
-                              if (indoorBikeBluetoothDevice == null) {
+                              if (indoorBikeBluetoothDeviceData == null) {
                                 return Text("Nothing selected");
                               } else {
-                                return Text("Name: ${indoorBikeBluetoothDevice?.platformName}");
+                                return Text("Name: ${indoorBikeBluetoothDeviceData?.deviceName}");
                               }
                             }),
                           ],
@@ -195,25 +201,26 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  bool hrmSelected() => hrmBluetoothDevice != null;
+  bool hrmSelected() => hrmBluetoothDeviceData != null;
 
-  bool indoorBikeSelected() => indoorBikeBluetoothDevice != null;
+  bool indoorBikeSelected() => indoorBikeBluetoothDeviceData != null;
 
   Future<void> _navigateAndSelectHRMBluetoothDevice(BuildContext context) async {
-    hrmBluetoothDevice = await Navigator.push(
+    hrmBluetoothDeviceData = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const BluetoothSelectionScreen()),
     );
-    print("Heart rate monitor selected: ${hrmBluetoothDevice?.platformName}");
+    print("Heart rate monitor selected: ${hrmBluetoothDeviceData?.deviceName}");
     setState(() {});
   }
 
   Future<void> _navigateAndSelectIndoorBikeBluetoothDevice(BuildContext context) async {
-    indoorBikeBluetoothDevice = await Navigator.push(
+    indoorBikeBluetoothDeviceData = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const BluetoothSelectionScreen()),
     );
-    print("Indoor bike selected: ${indoorBikeBluetoothDevice?.platformName}");
+
+    print("Indoor bike selected: ${indoorBikeBluetoothDeviceData?.deviceName}");
     setState(() {});
   }
 
@@ -226,8 +233,9 @@ class _MyAppState extends State<MyApp> {
       indoorBikeDevice = SimIndoorBikeDevice();
       heartRateDevice = SimHeartRateDevice(indoorBikeDevice.getListener());
     } else {
-      indoorBikeDevice = BluetoothIndoorBikeDevice(indoorBikeBluetoothDevice!);
-      heartRateDevice = BluetoothHeartRateDevice(hrmBluetoothDevice!);
+      indoorBikeDevice = BluetoothIndoorBikeDevice(indoorBikeBluetoothDeviceData!);
+      //indoorBikeDevice = SimIndoorBikeDevice();
+      heartRateDevice = BluetoothHeartRateDevice(hrmBluetoothDeviceData!);
     }
 
     Navigator.push(

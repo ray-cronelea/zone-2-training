@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:zone_2_training/preferences.dart';
@@ -8,16 +9,27 @@ class BluetoothSelectionScreen extends StatefulWidget {
   const BluetoothSelectionScreen({super.key});
 
   @override
-  _BluetoothSelectionScreenState createState() => _BluetoothSelectionScreenState();
+  State<StatefulWidget> createState() => _BluetoothSelectionScreenState();
 }
 
 class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
-  List<ScanResult> _scanResults = [];
-  BluetoothAdapterState _bluetoothAdapterState = BluetoothAdapterState.unknown;
+  late final ValueNotifier<BluetoothLowEnergyState> state;
+  late final ValueNotifier<bool> discovering;
+  late final ValueNotifier<List<DiscoveredEventArgs>> discoveredEventArgs;
+  late final StreamSubscription stateChangedSubscription;
+  late final StreamSubscription discoveredSubscription;
+
   bool simMode = false;
 
-  late StreamSubscription<List<ScanResult>> _scanResultsSubscription;
-  late StreamSubscription<BluetoothAdapterState> _adapterStateSubscription;
+  @override
+  void dispose() {
+    super.dispose();
+    stateChangedSubscription.cancel();
+    discoveredSubscription.cancel();
+    state.dispose();
+    discovering.dispose();
+    discoveredEventArgs.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,13 +43,18 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
           children: <Widget>[
             _buildBluetoothStatusMessage(context),
             _buildSimButton(context),
-            _buildListView(),
+            _buildListView(context),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.refresh),
-        onPressed: () => scanBluetoothDevices(),
+        onPressed: () async {
+          if (discovering.value) {
+            await stopDiscovery();
+            await startDiscovery();
+          }
+        },
       ),
     );
   }
@@ -46,68 +63,110 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
   void initState() {
     super.initState();
 
-    performSimModeTasks();
-    startListeningToBluetoothState();
-    scanBluetoothDevices();
+    _performSimModeTasks();
+
+    state = ValueNotifier(BluetoothLowEnergyState.unknown);
+    discovering = ValueNotifier(false);
+    discoveredEventArgs = ValueNotifier([]);
+    stateChangedSubscription = CentralManager.instance.stateChanged.listen(
+      (eventArgs) {
+        state.value = eventArgs.state;
+      },
+    );
+    discoveredSubscription = CentralManager.instance.discovered.listen(
+      (eventArgs) {
+        final items = discoveredEventArgs.value;
+        final i = items.indexWhere(
+          (item) => item.peripheral == eventArgs.peripheral,
+        );
+        if (i < 0) {
+          discoveredEventArgs.value = [...items, eventArgs];
+        } else {
+          items[i] = eventArgs;
+          discoveredEventArgs.value = [...items];
+        }
+      },
+    );
+    _initialize();
   }
 
-  Future<void> performSimModeTasks() async {
+  void _initialize() async {
+    state.value = await CentralManager.instance.getState();
+    await startDiscovery();
+  }
+
+  Future<void> _performSimModeTasks() async {
     simMode = await Preferences.isSimMode();
     setState(() {});
   }
 
-  @override
-  void dispose() {
-    _scanResultsSubscription.cancel();
-    _adapterStateSubscription.cancel();
-    super.dispose();
+  Future<void> startDiscovery() async {
+    print("start discovery");
+    discoveredEventArgs.value = [];
+    await CentralManager.instance.startDiscovery();
+    discovering.value = true;
   }
 
-  void startListeningToBluetoothState() {
-    _adapterStateSubscription = FlutterBluePlus.adapterState.listen((newAdapterState) {
-      setState(() {
-        _bluetoothAdapterState = newAdapterState;
-      });
-    });
+  Future<void> stopDiscovery() async {
+    print("stop discovery");
+    await CentralManager.instance.stopDiscovery();
+    discovering.value = false;
   }
 
-  void scanBluetoothDevices() {
-    _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
-      var scanResults = results.where((scanResult) => scanResult.device.platformName.isNotEmpty).toList();
-      for (ScanResult r in results) {
-        print('Platform name: ${r.device.platformName}, Device ID: ${r.device.remoteId.str}, RSSI: ${r.rssi}');
-      }
-      if (mounted) {
-        setState(() {
-          _scanResults = scanResults;
-        });
-      }
-    });
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
-  }
-
-  Widget _buildListView() {
+  Widget _buildListView(BuildContext context) {
     return Expanded(
-      child: ListView.separated(
-        itemBuilder: (context, index) => ListTile(
-          title: Text(_scanResults[index].device.platformName),
-          subtitle: Text(_scanResults[index].device.remoteId.str),
-          onTap: () {
-            Navigator.pop(context, _scanResults[index].device);
-          },
-        ),
-        separatorBuilder: (context, index) => const Divider(),
-        itemCount: _scanResults.length,
+      child: ValueListenableBuilder(
+        valueListenable: discoveredEventArgs,
+        builder: (context, discoveredEventArgs, child) {
+          final items = discoveredEventArgs.where((eventArgs) => eventArgs.advertisement.name != null).toList();
+          return ListView.separated(
+            itemBuilder: (context, i) {
+              final theme = Theme.of(context);
+              final item = items[i];
+              final uuid = item.peripheral.uuid;
+              final rssi = item.rssi;
+              final advertisement = item.advertisement;
+              final name = advertisement.name;
+              return ListTile(
+                onTap: () {
+                  Navigator.pop(context, BluetoothDeviceData(name ?? 'N/A', item.peripheral));
+                },
+                title: Text(name ?? 'N/A'),
+                subtitle: Text(
+                  '$uuid',
+                  style: theme.textTheme.bodySmall,
+                  softWrap: false,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RssiWidget(rssi),
+                    Text('$rssi'),
+                  ],
+                ),
+              );
+            },
+            separatorBuilder: (context, i) {
+              return const Divider(
+                height: 0.0,
+              );
+            },
+            itemCount: items.length,
+          );
+        },
       ),
     );
   }
 
   Widget _buildBluetoothStatusMessage(BuildContext context) {
-    return Builder(
-      builder: (context) {
-        if (_bluetoothAdapterState != BluetoothAdapterState.on) {
-          return const Text(
-            "Bluetooth not on!",
+    return ValueListenableBuilder(
+      valueListenable: state,
+      builder: (context, state, child) {
+        if (state != BluetoothLowEnergyState.poweredOn) {
+          return Text(
+            "Bluetooth state: ${state.name}",
             style: TextStyle(color: Colors.red),
           );
         }
@@ -122,8 +181,8 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
         if (simMode) {
           return OutlinedButton(
               onPressed: () {
-                BluetoothDevice bluetoothDevice = BluetoothDevice.fromId("SIM_MODE");
-                return Navigator.pop(context, bluetoothDevice);
+                //BluetoothDevice bluetoothDevice = BluetoothDevice.fromId("SIM_MODE");
+                return Navigator.pop(context, BluetoothDeviceData("SIM MODE", SimPeripheral()));
               },
               child: Text("Use Sim Device"));
         }
@@ -131,4 +190,39 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
       },
     );
   }
+}
+
+class RssiWidget extends StatelessWidget {
+  final int rssi;
+
+  const RssiWidget(
+    this.rssi, {
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final IconData icon;
+    if (rssi > -70) {
+      icon = Icons.wifi_rounded;
+    } else if (rssi > -100) {
+      icon = Icons.wifi_2_bar_rounded;
+    } else {
+      icon = Icons.wifi_1_bar_rounded;
+    }
+    return Icon(icon);
+  }
+}
+
+class BluetoothDeviceData {
+  String deviceName;
+  Peripheral peripheral;
+
+  BluetoothDeviceData(this.deviceName, this.peripheral);
+}
+
+class SimPeripheral implements Peripheral {
+  @override
+  // TODO: implement uuid
+  UUID get uuid => UUID([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 }

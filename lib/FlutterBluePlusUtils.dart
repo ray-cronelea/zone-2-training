@@ -1,6 +1,6 @@
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-class BluetoothUtils {
+class FlutterBluePlusUtils {
   static const String heartRateMeasurementServiceUUID = "180d";
   static const String heartrateMeasurementCharacteristicUUID = "2a37";
 
@@ -11,7 +11,7 @@ class BluetoothUtils {
   static const String fitnessMachineControlPointCharacteristicUUID ="2ad9";
 
   static BluetoothCharacteristic? getHeartRateMeasurementCharacteristic(List<BluetoothService> services) {
-    return getCharacteristic(services, (characteristic) => BluetoothUtils.isHeartRateMeasurementCharacteristic(characteristic));
+    return getCharacteristic(services, (characteristic) => FlutterBluePlusUtils.isHeartRateMeasurementCharacteristic(characteristic));
   }
 
   static bool isHeartRateMeasurementCharacteristic(BluetoothCharacteristic characteristic) {
@@ -20,7 +20,7 @@ class BluetoothUtils {
   }
 
   static BluetoothCharacteristic? getCyclingPowerMeasurementCharacteristic(List<BluetoothService> services) {
-    return getCharacteristic(services, (characteristic) => BluetoothUtils.isCyclingPowerMeasurementCharacteristic(characteristic));
+    return getCharacteristic(services, (characteristic) => FlutterBluePlusUtils.isCyclingPowerMeasurementCharacteristic(characteristic));
   }
 
   static bool isCyclingPowerMeasurementCharacteristic(characteristic) {
@@ -29,7 +29,7 @@ class BluetoothUtils {
   }
 
   static BluetoothCharacteristic? getFitnessMachineControlPointCharacteristic(List<BluetoothService> services) {
-    return getCharacteristic(services, (characteristic) => BluetoothUtils.isFitnessMachineControlPointCharacteristic(characteristic));
+    return getCharacteristic(services, (characteristic) => FlutterBluePlusUtils.isFitnessMachineControlPointCharacteristic(characteristic));
   }
 
   static bool isFitnessMachineControlPointCharacteristic(characteristic) {

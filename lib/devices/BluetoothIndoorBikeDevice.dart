@@ -1,35 +1,50 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
+import 'package:zone_2_training/BluetoothLowEnergyUtils.dart';
 
-import '../BluetoothUtils.dart';
+import '../BluetoothSelectionScreen.dart';
 import 'IndoorBikeDevice.dart';
 
 class BluetoothIndoorBikeDevice implements IndoorBikeDevice {
-  BluetoothDevice bluetoothDevice;
+  BluetoothDeviceData bluetoothDeviceData;
 
-  BluetoothIndoorBikeDevice(this.bluetoothDevice);
+  BluetoothIndoorBikeDevice(this.bluetoothDeviceData);
 
-  BluetoothCharacteristic? _cyclingPowerMeasurementCharacteristic;
-  BluetoothCharacteristic? _fitnessMachineControlPointCharacteristic;
+  GattCharacteristic? _cyclingPowerMeasurementCharacteristic;
+  GattCharacteristic? _fitnessMachineControlPointCharacteristic;
 
-  StreamSubscription<List<int>>? _heartRateListener;
+  late final StreamSubscription characteristicNotifiedSubscription;
 
   @override
   Future<void> connect() async {
-    await bluetoothDevice.connect();
-    List<BluetoothService> services = await bluetoothDevice.discoverServices();
-    _cyclingPowerMeasurementCharacteristic = BluetoothUtils.getCyclingPowerMeasurementCharacteristic(services)!;
-    _fitnessMachineControlPointCharacteristic = BluetoothUtils.getFitnessMachineControlPointCharacteristic(services)!;
+    await CentralManager.instance.connect(bluetoothDeviceData.peripheral);
+    List<GattService> services = await CentralManager.instance.discoverGATT(bluetoothDeviceData.peripheral);
+
+    printServices(services);
+
+    _cyclingPowerMeasurementCharacteristic = BluetoothLowEnergyUtils.getCyclingPowerMeasurementCharacteristic(services)!;
+    _fitnessMachineControlPointCharacteristic = BluetoothLowEnergyUtils.getFitnessMachineControlPointCharacteristic(services)!;
+
+    await CentralManager.instance.setCharacteristicNotifyState(_cyclingPowerMeasurementCharacteristic!, state: true);
 
     await writeRequestControl();
   }
 
+  void printServices(List<GattService> services) {
+    for (GattService service in services) {
+      for (GattCharacteristic characteristic in service.characteristics) {
+        print("Service: ${service.uuid}, characteristic: ${characteristic.uuid}");
+      }
+    }
+  }
+
   @override
   Future<void> disconnect() async {
-    _heartRateListener?.cancel();
-    await bluetoothDevice.disconnect();
+    _cyclingPowerMeasurementCharacteristic = null;
+    _fitnessMachineControlPointCharacteristic = null;
+    await CentralManager.instance.disconnect(bluetoothDeviceData.peripheral);
   }
 
   @override
@@ -39,24 +54,38 @@ class BluetoothIndoorBikeDevice implements IndoorBikeDevice {
     }
 
     StreamController<int> controller = StreamController<int>();
-    _heartRateListener = _cyclingPowerMeasurementCharacteristic!.onValueReceived.listen((value) {
-      controller.add(getCurrentActualPower(value));
-    });
 
-    _cyclingPowerMeasurementCharacteristic!.setNotifyValue(true);
+    characteristicNotifiedSubscription = CentralManager.instance.characteristicNotified.listen(
+      (eventArgs) {
+        if (eventArgs.characteristic != _cyclingPowerMeasurementCharacteristic) {
+          return;
+        }
+        controller.add(getCurrentActualPower(eventArgs.value));
+      },
+    );
 
     return controller.stream;
   }
 
-  Future<void>? writeRequestControl() async {
-    return _fitnessMachineControlPointCharacteristic?.write([0]);
+  Future<void> writeRequestControl() async {
+    print("Indoor bike requesting control");
+    return CentralManager.instance.writeCharacteristic(
+      _fitnessMachineControlPointCharacteristic!,
+      value: Uint8List.fromList([0]),
+      type: GattCharacteristicWriteType.withResponse,
+    );
   }
 
   @override
   Future<void> setTargetPower(int targetPower) async {
     // TODO: at the moment only one byte of power is sent so it will send a max value of 255
     //List<int> currentPowerSetpointBytes = toUint8List(currentPowerSetpoint);
-    await _fitnessMachineControlPointCharacteristic?.write([5, targetPower, 0]);
+
+    return CentralManager.instance.writeCharacteristic(
+      _fitnessMachineControlPointCharacteristic!,
+      value: Uint8List.fromList([5, targetPower, 0]),
+      type: GattCharacteristicWriteType.withResponse,
+    );
   }
 
   int getCurrentActualPower(List<int> value) {

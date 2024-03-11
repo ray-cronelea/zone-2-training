@@ -95,7 +95,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Transform.scale(
-                scale: 2.0, child: Text("$_heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
+                scale: 2.0, child: Text("$_currentPowerActual", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
           ),
           Text("WATT", style: const TextStyle(fontWeight: FontWeight.normal)),
         ]),
@@ -237,7 +237,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
 
     _exerciseCore = ExerciseCore(heartRateDevice, indoorBikeDevice, heartRateTarget: zone2HeartRate);
 
-    Stream<ExerciseData> exerciseDataStream = _exerciseCore.init();
+    Stream<ExerciseData> exerciseDataStream = await _exerciseCore.init();
     exerciseDataStream.listen((exerciseSample) {
       setState(() {
         _heartRateValue = exerciseSample.heartRateValue;

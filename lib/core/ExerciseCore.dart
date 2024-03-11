@@ -25,11 +25,11 @@ class ExerciseCore {
 
   StreamController<ExerciseData> streamController = StreamController<ExerciseData>();
 
-  Stream<ExerciseData> init() {
+  Future<Stream<ExerciseData>> init() async {
     pid = PID(Kp: 1, Ki: 0.1, Kd: 0.05, setPoint: heartRateTarget.toDouble(), minOutput: minPower, maxOutput: maxPower);
 
-    startReadingHeartRate();
-    startReadingAcutalPower();
+    await startReadingHeartRate();
+    await startReadingAcutalPower();
     setPower(minPower.toInt());
     return streamController.stream;
   }
@@ -47,13 +47,14 @@ class ExerciseCore {
   Future<void> startReadingAcutalPower() async {
     await _indoorBikeBluetoothDevice.connect();
     _indoorBikeBluetoothDevice.getListener().listen((value) {
+      print("Power received $value");
       _currentPowerActual = value;
     });
   }
 
   Future<void> startReadingHeartRate() async {
     await _heartRateBluetoothDevice.connect();
-    _heartRateBluetoothDevice.getListener().listen((value) {
+    await _heartRateBluetoothDevice.getListener().listen((value) {
       print("Heart rate received $value");
       _heartRateValue = value;
     });
@@ -68,6 +69,7 @@ class ExerciseCore {
   }
 
   void setPower(int power) {
+    print("setting power: $power");
     _indoorBikeBluetoothDevice.setTargetPower(power);
   }
 

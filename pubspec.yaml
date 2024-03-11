@@ -19,11 +19,13 @@ dependencies:
   cupertino_icons: ^1.0.6
   permission_handler: ^11.3.0
   flutter_blue_plus: ^1.31.15
+  bluetooth_low_energy: ^5.0.6
   syncfusion_flutter_charts: ^24.2.8
   simple_pid: ^1.0.4
   flutter_ftms: ^1.0.2
   shared_preferences: ^2.2.2
   keep_screen_on: ^3.0.0
+  convert: ^3.1.1
 
 dev_dependencies:
   flutter_test:
