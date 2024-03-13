@@ -1,48 +1,46 @@
-import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
+import 'package:universal_ble/universal_ble.dart';
 
 class BluetoothLowEnergyUtils {
 
-  static UUID exampleUUID = UUID.short(0x180f);
+  static String heartRateMeasurementServiceUUID = "180D";
+  static String heartrateMeasurementCharacteristicUUID = "2A37";
 
-  static UUID heartRateMeasurementServiceUUID = UUID.short(0x180d);
-  static UUID heartrateMeasurementCharacteristicUUID = UUID.short(0x2a37);
+  static String cyclingPowerMeasurementServiceUUID = "1818";
+  static String cyclingPowerMeasurementCharacteristicUUID = "2A63";
 
-  static UUID cyclingPowerMeasurementServiceUUID = UUID.short(0x1818);
-  static UUID cyclingPowerMeasurementCharacteristicUUID = UUID.short(0x2a63);
+  static String fitnessMachineServiceUUID = "1826";
+  static String fitnessMachineControlPointCharacteristicUUID = "2AD9";
 
-  static UUID fitnessMachineServiceUUID = UUID.short(0x1826);
-  static UUID fitnessMachineControlPointCharacteristicUUID = UUID.short(0x2ad9);
-
-  static GattCharacteristic? getHeartRateMeasurementCharacteristic(List<GattService> services) {
+  static BleCharacteristic? getHeartRateMeasurementCharacteristic(List<BleService> services) {
     return getCharacteristic(services, (service, characteristic) => isHeartRateMeasurementCharacteristic(service, characteristic));
   }
 
-  static bool isHeartRateMeasurementCharacteristic(GattService service, GattCharacteristic characteristic) {
+  static bool isHeartRateMeasurementCharacteristic(BleService service, BleCharacteristic characteristic) {
     return service.uuid == heartRateMeasurementServiceUUID &&
         characteristic.uuid == heartrateMeasurementCharacteristicUUID;
   }
 
-  static GattCharacteristic? getCyclingPowerMeasurementCharacteristic(List<GattService> services) {
+  static BleCharacteristic? getCyclingPowerMeasurementCharacteristic(List<BleService> services) {
     return getCharacteristic(services, (service, characteristic) => isCyclingPowerMeasurementCharacteristic(service, characteristic));
   }
 
-  static bool isCyclingPowerMeasurementCharacteristic(GattService service, GattCharacteristic characteristic) {
+  static bool isCyclingPowerMeasurementCharacteristic(BleService service, BleCharacteristic characteristic) {
     return service.uuid == cyclingPowerMeasurementServiceUUID &&
         characteristic.uuid == cyclingPowerMeasurementCharacteristicUUID;
   }
 
-  static GattCharacteristic? getFitnessMachineControlPointCharacteristic(List<GattService> services) {
+  static BleCharacteristic? getFitnessMachineControlPointCharacteristic(List<BleService> services) {
     return getCharacteristic(services, (service, characteristic) => isFitnessMachineControlPointCharacteristic(service, characteristic));
   }
 
-  static bool isFitnessMachineControlPointCharacteristic(GattService service, GattCharacteristic characteristic) {
+  static bool isFitnessMachineControlPointCharacteristic(BleService service, BleCharacteristic characteristic) {
     return service.uuid == fitnessMachineServiceUUID &&
         characteristic.uuid == fitnessMachineControlPointCharacteristicUUID;
   }
 
-  static GattCharacteristic? getCharacteristic(List<GattService> services, bool Function(dynamic service, dynamic characteristic) isRequiredPredicate) {
-    for (GattService service in services) {
-      for (GattCharacteristic characteristic in service.characteristics) {
+  static BleCharacteristic? getCharacteristic(List<BleService> services, bool Function(dynamic service, dynamic characteristic) isRequiredPredicate) {
+    for (BleService service in services) {
+      for (BleCharacteristic characteristic in service.characteristics) {
         if (isRequiredPredicate(service, characteristic)) {
           print("Found characteristic: ${characteristic.uuid}");
           return characteristic;
@@ -50,6 +48,14 @@ class BluetoothLowEnergyUtils {
       }
     }
     throw("Didn't find characteristic");
+  }
+
+  static void printServices(List<BleService> services) {
+    for (BleService service in services) {
+      for (BleCharacteristic characteristic in service.characteristics) {
+        print("Service: ${service.uuid}, characteristic: ${characteristic.uuid}");
+      }
+    }
   }
 
 }

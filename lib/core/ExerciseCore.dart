@@ -6,15 +6,20 @@ import '../devices/HeartRateDevice.dart';
 import '../devices/IndoorBikeDevice.dart';
 
 class ExerciseCore {
-  final HeartRateDevice _heartRateBluetoothDevice;
-  final IndoorBikeDevice _indoorBikeBluetoothDevice;
+
+  final Stream<int> _heartRateStream;
+  final Stream<int> _powerRateStream;
+  final void Function(int) _powerSetFunction;
 
   int heartRateTarget = 125;
 
-  ExerciseCore(this._heartRateBluetoothDevice, this._indoorBikeBluetoothDevice, {heartRateTarget});
+  ExerciseCore(this._heartRateStream, this._powerRateStream, this._powerSetFunction, {heartRateTarget});
 
   late PID pid;
   Timer? timer;
+
+  StreamSubscription<int>? _powerRateStreamSubscription;
+  StreamSubscription<int>? _heartRateStreamSubscription;
 
   int _currentPowerSetpoint = 0;
   int _currentPowerActual = 0;
@@ -39,22 +44,20 @@ class ExerciseCore {
   }
 
   void pause() {
-    if (timer!= null){
+    if (timer != null) {
       timer!.cancel();
     }
   }
 
   Future<void> startReadingAcutalPower() async {
-    await _indoorBikeBluetoothDevice.connect();
-    _indoorBikeBluetoothDevice.getListener().listen((value) {
+    _powerRateStreamSubscription = _powerRateStream.listen((value) {
       print("Power received $value");
       _currentPowerActual = value;
     });
   }
 
   Future<void> startReadingHeartRate() async {
-    await _heartRateBluetoothDevice.connect();
-    await _heartRateBluetoothDevice.getListener().listen((value) {
+    _heartRateStreamSubscription = _heartRateStream.listen((value) {
       print("Heart rate received $value");
       _heartRateValue = value;
     });
@@ -70,12 +73,12 @@ class ExerciseCore {
 
   void setPower(int power) {
     print("setting power: $power");
-    _indoorBikeBluetoothDevice.setTargetPower(power);
+    _powerSetFunction(power);
   }
 
   void dispose() {
-    _heartRateBluetoothDevice.disconnect();
-    _indoorBikeBluetoothDevice.disconnect();
+    _heartRateStreamSubscription?.cancel();
+    _powerRateStreamSubscription?.cancel();
     pause();
   }
 

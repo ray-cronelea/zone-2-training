@@ -187,6 +187,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_web_bluetooth:
+    dependency: transitive
+    description:
+      name: flutter_web_bluetooth
+      sha256: "52ce64f65d7321c4bf6abfe9dac02fb888731339a5e0ad6de59fb916c20c9f02"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.3"
   flutter_web_plugins:
     dependency: transitive
     description: flutter
@@ -200,6 +208,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.19.0"
+  js:
+    dependency: transitive
+    description:
+      name: js
+      sha256: c1b2e9b5ea78c45e1a0788d29606ba27dc5f71f019f32ca5140f61ef071838cf
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.1"
   keep_screen_on:
     dependency: "direct main"
     description:
@@ -533,6 +549,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.2"
+  universal_ble:
+    dependency: "direct main"
+    description:
+      name: universal_ble
+      sha256: db324a10350a1c7e80d36923376746ef14bca0cc1008c86f710ab0cc62ad480b
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.9.3"
   vector_math:
     dependency: transitive
     description:

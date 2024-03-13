@@ -11,10 +11,13 @@ import 'package:zone_2_training/preferences.dart';
 
 import 'BluetoothSelectionScreen.dart';
 import 'ExerciseScreen.dart';
+import 'devices/BluetoothDevices.dart';
 import 'devices/BluetoothHeartRateDevice.dart';
 import 'devices/BluetoothIndoorBikeDevice.dart';
 import 'devices/HeartRateDevice.dart';
+import 'devices/DeviceDataProvider.dart';
 import 'devices/IndoorBikeDevice.dart';
+import 'devices/SimDevices.dart';
 import 'devices/SimHeartRateDevice.dart';
 import 'devices/SimIndoorBikeDevice.dart';
 
@@ -155,8 +158,9 @@ class _MyAppState extends State<MyApp> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
           child: Card(
-            color:
-                indoorBikeBluetoothDeviceData == null ? Theme.of(context).colorScheme.errorContainer : Theme.of(context).colorScheme.secondaryContainer,
+            color: indoorBikeBluetoothDeviceData == null
+                ? Theme.of(context).colorScheme.errorContainer
+                : Theme.of(context).colorScheme.secondaryContainer,
             clipBehavior: Clip.hardEdge,
             child: InkWell(
               onTap: () => _navigateAndSelectIndoorBikeBluetoothDevice(context),
@@ -225,22 +229,18 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _navigateToExercise(BuildContext context) async {
-    HeartRateDevice heartRateDevice;
-    IndoorBikeDevice indoorBikeDevice;
+
+    DeviceDataProvider deviceDataProvider;
 
     if (await Preferences.isSimMode()) {
-      print("SIM MODE ENABLED");
-      indoorBikeDevice = SimIndoorBikeDevice();
-      heartRateDevice = SimHeartRateDevice(indoorBikeDevice.getListener());
+      deviceDataProvider = SimDevices();
     } else {
-      indoorBikeDevice = BluetoothIndoorBikeDevice(indoorBikeBluetoothDeviceData!);
-      //indoorBikeDevice = SimIndoorBikeDevice();
-      heartRateDevice = BluetoothHeartRateDevice(hrmBluetoothDeviceData!);
+      deviceDataProvider = BluetoothDevices(hrmBluetoothDeviceData!.bleScanResult!.deviceId, indoorBikeBluetoothDeviceData!.bleScanResult!.deviceId);
     }
 
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ExerciseScreen(heartRateDevice, indoorBikeDevice)),
+      MaterialPageRoute(builder: (context) => ExerciseScreen(deviceDataProvider)),
     );
   }
 

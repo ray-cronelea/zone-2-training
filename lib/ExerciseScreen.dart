@@ -4,28 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:keep_screen_on/keep_screen_on.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-import 'package:zone_2_training/devices/HeartRateDevice.dart';
-import 'package:zone_2_training/devices/IndoorBikeDevice.dart';
 import 'package:zone_2_training/preferences.dart';
 import 'core/ExerciseCore.dart';
+import 'devices/DeviceDataProvider.dart';
 
 class ExerciseScreen extends StatefulWidget {
-  final HeartRateDevice heartRateDevice;
-  final IndoorBikeDevice indoorBikeDevice;
+  final DeviceDataProvider _deviceDataProvider;
 
-  const ExerciseScreen(this.heartRateDevice, this.indoorBikeDevice, {super.key});
+  const ExerciseScreen(this._deviceDataProvider, {super.key});
 
   @override
   State<StatefulWidget> createState() {
-    return _ExerciseScreenState(heartRateDevice, indoorBikeDevice);
+    return _ExerciseScreenState(_deviceDataProvider);
   }
 }
 
 class _ExerciseScreenState extends State<ExerciseScreen> {
-  HeartRateDevice heartRateDevice;
-  IndoorBikeDevice indoorBikeDevice;
+  DeviceDataProvider _deviceDataProvider;
 
-  _ExerciseScreenState(this.heartRateDevice, this.indoorBikeDevice);
+  _ExerciseScreenState(this._deviceDataProvider);
 
   late ExerciseCore _exerciseCore;
   late SharedPreferences prefs;
@@ -227,6 +224,8 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   }
 
   Future<void> initRuntime() async {
+    await _deviceDataProvider.connect();
+
     int maxHeartRate = await Preferences.getMaxHeartRate();
     int zone2HeartRate = (maxHeartRate * 0.65).toInt();
     print(zone2HeartRate);
@@ -235,7 +234,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
       _heartRateTarget = zone2HeartRate;
     });
 
-    _exerciseCore = ExerciseCore(heartRateDevice, indoorBikeDevice, heartRateTarget: zone2HeartRate);
+    _exerciseCore = ExerciseCore(_deviceDataProvider.getHeartRateStream(), _deviceDataProvider.getPowerStream(), _deviceDataProvider.setPower, heartRateTarget: zone2HeartRate);
 
     Stream<ExerciseData> exerciseDataStream = await _exerciseCore.init();
     exerciseDataStream.listen((exerciseSample) {

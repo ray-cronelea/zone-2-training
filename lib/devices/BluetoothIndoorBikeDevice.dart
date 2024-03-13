@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
-import 'package:zone_2_training/BluetoothLowEnergyUtils.dart';
+import 'package:convert/convert.dart';
+import 'package:universal_ble/universal_ble.dart';
 
+import '../BluetoothLowEnergyUtils.dart';
 import '../BluetoothSelectionScreen.dart';
 import 'IndoorBikeDevice.dart';
 
@@ -12,79 +13,115 @@ class BluetoothIndoorBikeDevice implements IndoorBikeDevice {
 
   BluetoothIndoorBikeDevice(this.bluetoothDeviceData);
 
-  GattCharacteristic? _cyclingPowerMeasurementCharacteristic;
-  GattCharacteristic? _fitnessMachineControlPointCharacteristic;
+  BleCharacteristic? _cyclingPowerMeasurementCharacteristic;
+  BleCharacteristic? _fitnessMachineControlPointCharacteristic;
 
   late final StreamSubscription characteristicNotifiedSubscription;
 
+  StreamController<int> controller = StreamController<int>();
+
   @override
   Future<void> connect() async {
-    await CentralManager.instance.connect(bluetoothDeviceData.peripheral);
-    List<GattService> services = await CentralManager.instance.discoverGATT(bluetoothDeviceData.peripheral);
+    UniversalBle.onConnectionChanged = _handleConnectionChange;
+    UniversalBle.onValueChanged = _handleValueChange;
 
-    printServices(services);
+    await UniversalBle.connect(bluetoothDeviceData.bleScanResult!.deviceId);
 
-    _cyclingPowerMeasurementCharacteristic = BluetoothLowEnergyUtils.getCyclingPowerMeasurementCharacteristic(services)!;
-    _fitnessMachineControlPointCharacteristic = BluetoothLowEnergyUtils.getFitnessMachineControlPointCharacteristic(services)!;
+    // List<BleService> services = await UniversalBle.discoverServices(bluetoothDeviceData.bleScanResult!.deviceId);
+    // BluetoothLowEnergyUtils.printServices(services);
 
-    await CentralManager.instance.setCharacteristicNotifyState(_cyclingPowerMeasurementCharacteristic!, state: true);
+    // _cyclingPowerMeasurementCharacteristic = BluetoothLowEnergyUtils.getCyclingPowerMeasurementCharacteristic(services)!;
+    // _fitnessMachineControlPointCharacteristic = BluetoothLowEnergyUtils.getFitnessMachineControlPointCharacteristic(services)!;
 
-    await writeRequestControl();
+    // await UniversalBle.setNotifiable(
+    //   bluetoothDeviceData.bleScanResult!.deviceId,
+    //   BluetoothLowEnergyUtils.cyclingPowerMeasurementServiceUUID,
+    //   "2a63",
+    //   BleInputProperty.notification,
+    // );
+
   }
 
-  void printServices(List<GattService> services) {
-    for (GattService service in services) {
-      for (GattCharacteristic characteristic in service.characteristics) {
-        print("Service: ${service.uuid}, characteristic: ${characteristic.uuid}");
+  Future<void> _handleConnectionChange(String deviceId, BleConnectionState state) async {
+    print('_handleConnectionChange $deviceId, ${state.name}');
+    // Auto Discover Services
+    if ((state == BleConnectionState.connected)) {
+      await _discoverServices(deviceId);
+
+      // Set notifications for required data based on device
+      if (deviceId == bluetoothDeviceData.bleScanResult!.deviceId) {
+        await UniversalBle.setNotifiable(
+          bluetoothDeviceData.bleScanResult!.deviceId,
+          BluetoothLowEnergyUtils.cyclingPowerMeasurementServiceUUID,
+          BluetoothLowEnergyUtils.cyclingPowerMeasurementCharacteristicUUID,
+          BleInputProperty.notification,
+        );
       }
     }
+  }
+
+  void _handleValueChange(String deviceId, String characteristicId, Uint8List value) {
+    String s = String.fromCharCodes(value);
+    print('_handleValueChange $deviceId, $characteristicId, $s');
+
+    if (equalsIgnoreCase(deviceId,bluetoothDeviceData.bleScanResult!.deviceId) && equalsIgnoreCase(characteristicId, BluetoothLowEnergyUtils.cyclingPowerMeasurementCharacteristicUUID)) {
+      controller.add(_getCurrentActualPower(value));
+    }
+  }
+
+  int _getCurrentActualPower(List<int> value) {
+    int powerLSB = value[2];
+    int powerMSB = value[3];
+    return (powerMSB << 8) + powerLSB;
+  }
+
+  bool equalsIgnoreCase(String? string1, String? string2) {
+    return string1?.toLowerCase() == string2?.toLowerCase();
+  }
+
+  Future<void> _discoverServices(String deviceId) async {
+    List<BleService> services = await UniversalBle.discoverServices(deviceId);
+    print('${services.length} services discovered for device id $deviceId');
+    BluetoothLowEnergyUtils.printServices(services);
   }
 
   @override
   Future<void> disconnect() async {
     _cyclingPowerMeasurementCharacteristic = null;
     _fitnessMachineControlPointCharacteristic = null;
-    await CentralManager.instance.disconnect(bluetoothDeviceData.peripheral);
+    UniversalBle.setNotifiable(
+      bluetoothDeviceData.bleScanResult!.deviceId,
+      BluetoothLowEnergyUtils.cyclingPowerMeasurementServiceUUID,
+      "2a63",
+      BleInputProperty.notification,
+    );
   }
 
   @override
   Stream<int> getListener() {
-    if (_cyclingPowerMeasurementCharacteristic == null) {
-      throw Exception('Not connected to bluetooth device');
-    }
-
-    StreamController<int> controller = StreamController<int>();
-
-    characteristicNotifiedSubscription = CentralManager.instance.characteristicNotified.listen(
-      (eventArgs) {
-        if (eventArgs.characteristic != _cyclingPowerMeasurementCharacteristic) {
-          return;
-        }
-        controller.add(getCurrentActualPower(eventArgs.value));
-      },
-    );
-
     return controller.stream;
-  }
-
-  Future<void> writeRequestControl() async {
-    print("Indoor bike requesting control");
-    return CentralManager.instance.writeCharacteristic(
-      _fitnessMachineControlPointCharacteristic!,
-      value: Uint8List.fromList([0]),
-      type: GattCharacteristicWriteType.withResponse,
-    );
   }
 
   @override
   Future<void> setTargetPower(int targetPower) async {
+    print("Indoor bike requesting control");
+    UniversalBle.writeValue(
+      bluetoothDeviceData.bleScanResult!.deviceId,
+      BluetoothLowEnergyUtils.fitnessMachineServiceUUID,
+      "2a63",
+      Uint8List.fromList([0]),
+      BleOutputProperty.withResponse,
+    );
+
     // TODO: at the moment only one byte of power is sent so it will send a max value of 255
     //List<int> currentPowerSetpointBytes = toUint8List(currentPowerSetpoint);
 
-    return CentralManager.instance.writeCharacteristic(
-      _fitnessMachineControlPointCharacteristic!,
-      value: Uint8List.fromList([5, targetPower, 0]),
-      type: GattCharacteristicWriteType.withResponse,
+    return UniversalBle.writeValue(
+      bluetoothDeviceData.bleScanResult!.deviceId,
+      BluetoothLowEnergyUtils.fitnessMachineServiceUUID,
+      "2a63",
+      Uint8List.fromList([5, targetPower, 0]),
+      BleOutputProperty.withResponse,
     );
   }
 
