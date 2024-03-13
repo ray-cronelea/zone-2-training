@@ -1,12 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:keep_screen_on/keep_screen_on.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-import 'package:zone_2_training/preferences.dart';
-import 'core/ExerciseCore.dart';
-import 'devices/DeviceDataProvider.dart';
+import 'package:zone_2_training/settings/preferences.dart';
+import '../exercise/ExerciseCore.dart';
+import '../devices/DeviceDataProvider.dart';
 
 class ExerciseScreen extends StatefulWidget {
   final DeviceDataProvider _deviceDataProvider;
@@ -142,8 +143,6 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     );
   }
 
-  // return Navigator.pop(context);
-
   BottomAppBar buildBottomAppBar(BuildContext context) {
     return BottomAppBar(
       child: IconTheme(
@@ -219,7 +218,9 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   @override
   void initState() {
     super.initState();
-    KeepScreenOn.turnOn();
+    if (Platform.isAndroid || Platform.isIOS) {
+      KeepScreenOn.turnOn();
+    }
     initRuntime();
   }
 
@@ -263,7 +264,9 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
 
   @override
   void dispose() {
-    KeepScreenOn.turnOff();
+    if (Platform.isAndroid || Platform.isIOS) {
+      KeepScreenOn.turnOff();
+    }
     _exerciseCore.dispose();
     super.dispose();
   }
@@ -272,7 +275,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     return SizedBox(
       height: 250,
       child: SfCartesianChart(
-          annotations: [
+          annotations: const [
             CartesianChartAnnotation(
               widget: Text("Power"),
               x: "50%",
@@ -312,7 +315,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     return SizedBox(
       height: 250,
       child: SfCartesianChart(
-          annotations: [
+          annotations: const [
             CartesianChartAnnotation(
               widget: Text("Heart Rate"),
               x: "50%",

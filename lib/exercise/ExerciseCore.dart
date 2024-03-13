@@ -2,11 +2,7 @@ import 'dart:async';
 
 import 'package:simple_pid/simple_pid.dart';
 
-import '../devices/HeartRateDevice.dart';
-import '../devices/IndoorBikeDevice.dart';
-
 class ExerciseCore {
-
   final Stream<int> _heartRateStream;
   final Stream<int> _powerRateStream;
   final void Function(int) _powerSetFunction;

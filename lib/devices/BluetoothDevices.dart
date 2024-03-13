@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:universal_ble/universal_ble.dart';
-import 'package:zone_2_training/BluetoothLowEnergyUtils.dart';
+import 'package:zone_2_training/devices/BluetoothLowEnergyUtils.dart';
 import 'package:zone_2_training/devices/DeviceDataProvider.dart';
 
 class BluetoothDevices implements DeviceDataProvider {
@@ -104,7 +104,6 @@ class BluetoothDevices implements DeviceDataProvider {
 
   void _handleValueChange(String deviceId, String characteristicId, Uint8List value) {
     String s = String.fromCharCodes(value);
-    String data = '$s\nraw :  ${value.toString()}';
     print('_handleValueChange $deviceId, $characteristicId, $s');
 
     if ((equalsIgnoreCase(deviceId,heartRateDeviceId)) && (equalsIgnoreCase(characteristicId,BluetoothLowEnergyUtils.heartrateMeasurementCharacteristicUUID))) {

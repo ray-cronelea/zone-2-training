@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
 import 'package:flutter/material.dart';
 import 'package:universal_ble/universal_ble.dart';
-import 'package:zone_2_training/preferences.dart';
+import 'package:zone_2_training/settings/preferences.dart';
 
 class BluetoothSelectionScreen extends StatefulWidget {
   const BluetoothSelectionScreen({super.key});
@@ -59,33 +59,33 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
   void initState() {
     super.initState();
 
-    _performSimModeTasks();
+    _checkSimModeEnabled();
 
     state = ValueNotifier(AvailabilityState.unknown);
-
     discovering = ValueNotifier(false);
     bleScanResults = ValueNotifier([]);
 
-
-    UniversalBle.onAvailabilityChange = (availabilityState) {
-      state.value = availabilityState;
-    };
-
-    // Set a scan result handler
-    UniversalBle.onScanResult = (scanResult) {
-      var currentValues = bleScanResults.value;
-      final i = currentValues.indexWhere(
-            (item) => item.deviceId == scanResult.deviceId,
-      );
-      if (i < 0) {
-        bleScanResults.value = [...currentValues, scanResult];
-      } else {
-        currentValues[i] = scanResult;
-        bleScanResults.value = [...currentValues];
-      }
-    };
+    UniversalBle.onAvailabilityChange = _onAvailabilityChange;
+    UniversalBle.onScanResult = _onScanResult;
 
     _initialize();
+  }
+
+  void _onScanResult(scanResult) {
+    var currentValues = bleScanResults.value;
+    final i = currentValues.indexWhere(
+          (item) => item.deviceId == scanResult.deviceId,
+    );
+    if (i < 0) {
+      bleScanResults.value = [...currentValues, scanResult];
+    } else {
+      currentValues[i] = scanResult;
+      bleScanResults.value = [...currentValues];
+    }
+  }
+
+  void _onAvailabilityChange(availabilityState) {
+    state.value = availabilityState;
   }
 
   void _initialize() async {
@@ -93,7 +93,7 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
     await startDiscovery();
   }
 
-  Future<void> _performSimModeTasks() async {
+  Future<void> _checkSimModeEnabled() async {
     simMode = await Preferences.isSimMode();
     setState(() {});
   }
@@ -164,7 +164,7 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
         if (state != AvailabilityState.poweredOn) {
           return Text(
             "Bluetooth state: ${state.name}",
-            style: TextStyle(color: Colors.red),
+            style: const TextStyle(color: Colors.red),
           );
         }
         return const Text("");
@@ -181,7 +181,7 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
                 //BluetoothDevice bluetoothDevice = BluetoothDevice.fromId("SIM_MODE");
                 return Navigator.pop(context, BluetoothDeviceData("SIM MODE", null, null));
               },
-              child: Text("Use Sim Device"));
+              child: const Text("Use Sim Device"));
         }
         return const SizedBox.shrink();
       },
