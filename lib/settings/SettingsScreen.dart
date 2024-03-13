@@ -82,7 +82,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               controller: maxHeartRateController,
               keyboardType: TextInputType.number,
               inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.monitor_heart),
                 suffixText: "BPM",
                 labelText: 'Max Heart Rate',

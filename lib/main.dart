@@ -18,13 +18,13 @@ void main() {
     [Permission.bluetooth, Permission.bluetoothConnect, Permission.bluetoothScan].request().then((status) {
       runApp(MaterialApp(
         theme: themeData,
-        home: MyApp(),
+        home: const MyApp(),
       ));
     });
   } else {
     runApp(MaterialApp(
       theme: themeData,
-      home: MyApp(),
+      home: const MyApp(),
     ));
   }
 }

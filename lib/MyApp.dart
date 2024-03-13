@@ -99,10 +99,10 @@ class _MyAppState extends State<MyApp> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('Heart Rate Device', style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Text('Heart Rate Device', style: TextStyle(fontWeight: FontWeight.bold)),
                             Builder(builder: (context) {
                               if (hrmBluetoothDeviceData == null) {
-                                return Text("Nothing selected");
+                                return const Text("Nothing selected");
                               } else {
                                 return Text("Name: ${hrmBluetoothDeviceData?.deviceName}");
                               }
@@ -111,8 +111,8 @@ class _MyAppState extends State<MyApp> {
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(15.0),
+                    const Padding(
+                      padding: EdgeInsets.all(15.0),
                       child: Icon(Icons.monitor_heart),
                     )
                   ],
@@ -142,13 +142,13 @@ class _MyAppState extends State<MyApp> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
+                            const Text(
                               'Indoor Cycling Device',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             Builder(builder: (context) {
                               if (indoorBikeBluetoothDeviceData == null) {
-                                return Text("Nothing selected");
+                                return const Text("Nothing selected");
                               } else {
                                 return Text("Name: ${indoorBikeBluetoothDeviceData?.deviceName}");
                               }
@@ -212,7 +212,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> _navigateToSettings(BuildContext context) async {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => SettingsScreen()),
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
     );
   }
 }

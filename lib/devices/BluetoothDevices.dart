@@ -122,7 +122,7 @@ class BluetoothDevices implements DeviceDataProvider {
   }
 
   void _handlePairingStateChange(String deviceId, bool isPaired, String? error) {
-    print('OnPairStateChange $deviceId, $isPaired, ${error}');
+    print('OnPairStateChange $deviceId, $isPaired, $error');
   }
 
   Future<void> _discoverServices(String deviceId) async {

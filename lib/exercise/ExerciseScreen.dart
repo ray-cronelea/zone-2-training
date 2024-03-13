@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:keep_screen_on/keep_screen_on.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,7 +20,7 @@ class ExerciseScreen extends StatefulWidget {
 }
 
 class _ExerciseScreenState extends State<ExerciseScreen> {
-  DeviceDataProvider _deviceDataProvider;
+  final DeviceDataProvider _deviceDataProvider;
 
   _ExerciseScreenState(this._deviceDataProvider);
 
@@ -86,7 +85,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
             child:
                 Transform.scale(scale: 2.0, child: Text("$_heartRateValue", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red))),
           ),
-          Text("BPM", style: const TextStyle(fontWeight: FontWeight.normal)),
+          const Text("BPM", style: TextStyle(fontWeight: FontWeight.normal)),
         ]),
         Column(children: [
           const Text("Power", style: TextStyle(fontWeight: FontWeight.normal)),
@@ -95,7 +94,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
             child: Transform.scale(
                 scale: 2.0, child: Text("$_currentPowerActual", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
           ),
-          Text("WATT", style: const TextStyle(fontWeight: FontWeight.normal)),
+          const Text("WATT", style: TextStyle(fontWeight: FontWeight.normal)),
         ]),
       ],
     );
@@ -114,7 +113,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
                   _heartRateTarget = _exerciseCore.heartRateTarget;
                 });
               },
-              icon: Transform.scale(scale: 2.0, child: Icon(Icons.remove))),
+              icon: Transform.scale(scale: 2.0, child: const Icon(Icons.remove))),
         ),
         Expanded(
           child: Column(children: [
@@ -124,7 +123,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
               child: Transform.scale(
                   scale: 2.0, child: Text("$_heartRateTarget", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange))),
             ),
-            Text("BPM", style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Text("BPM", style: TextStyle(fontWeight: FontWeight.bold)),
           ]),
         ),
         Padding(
@@ -137,7 +136,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
                   _heartRateTarget = _exerciseCore.heartRateTarget;
                 });
               },
-              icon: Transform.scale(scale: 2.0, child: Icon(Icons.add))),
+              icon: Transform.scale(scale: 2.0, child: const Icon(Icons.add))),
         ),
       ],
     );
@@ -158,9 +157,9 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
             const Spacer(),
             Builder(builder: (context) {
               if (running) {
-                return Text("Running");
+                return const Text("Running");
               } else {
-                return Text("Paused");
+                return const Text("Paused");
               }
             }),
             const Spacer(),
@@ -189,7 +188,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     bool? closeScreen = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: Text(
+        title: const Text(
           "Closing...",
           textAlign: TextAlign.center,
         ),

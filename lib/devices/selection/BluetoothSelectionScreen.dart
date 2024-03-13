@@ -130,7 +130,7 @@ class _BluetoothSelectionScreenState extends State<BluetoothSelectionScreen> {
                 },
                 title: Text(name ?? 'N/A'),
                 subtitle: Text(
-                  '$uuid',
+                  uuid,
                   style: theme.textTheme.bodySmall,
                   softWrap: false,
                   maxLines: 1,
