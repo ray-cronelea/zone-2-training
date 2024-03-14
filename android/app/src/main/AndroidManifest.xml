@@ -23,7 +23,7 @@
 
 
     <application
-        android:label="zone_2_training"
+        android:label="Zone 2 ERG Cycling Training"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
