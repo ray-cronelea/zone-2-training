@@ -164,19 +164,11 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
             }),
             const Spacer(),
             Builder(builder: (context) {
-              if (running) {
-                return OutlinedButton(
-                    child: const Icon(Icons.pause_outlined),
-                    onPressed: () {
-                      pauseRuntime();
-                    });
-              } else {
-                return OutlinedButton(
-                    child: const Icon(Icons.play_arrow_outlined),
-                    onPressed: () {
-                      startRuntime();
-                    });
-              }
+              return OutlinedButton(
+                  child: const Icon(Icons.question_mark),
+                  onPressed: () {
+                    presentHelp();
+                  });
             }),
           ],
         ),
@@ -209,6 +201,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
       ),
     );
     if (closeScreen ?? false) {
+      pauseRuntime();
       return Navigator.pop(context);
     }
     return;
@@ -234,7 +227,13 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
       _heartRateTarget = zone2HeartRate;
     });
 
-    _exerciseCore = ExerciseCore(_deviceDataProvider.getHeartRateStream(), _deviceDataProvider.getPowerStream(), _deviceDataProvider.setPower, heartRateTarget: zone2HeartRate);
+    _exerciseCore = ExerciseCore(_deviceDataProvider.getHeartRateStream(), _deviceDataProvider.getPowerStream(), _deviceDataProvider.setPower,
+        heartRateTarget: zone2HeartRate);
+
+    _exerciseCore.setHeartRateTarget(zone2HeartRate);
+    setState(() {
+      _heartRateTarget = zone2HeartRate;
+    });
 
     Stream<ExerciseData> exerciseDataStream = await _exerciseCore.init();
     exerciseDataStream.listen((exerciseSample) {
@@ -245,6 +244,8 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
         updateChart();
       });
     });
+
+    startRuntime();
   }
 
   void startRuntime() {
@@ -252,6 +253,10 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     setState(() {
       running = true;
     });
+  }
+
+  void presentHelp() {
+    // TODO
   }
 
   void pauseRuntime() {

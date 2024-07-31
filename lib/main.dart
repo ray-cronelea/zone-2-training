@@ -13,18 +13,22 @@ void main() {
     ),
   );
 
-  if (Platform.isAndroid) {
-    WidgetsFlutterBinding.ensureInitialized();
-    [Permission.bluetooth, Permission.bluetoothConnect, Permission.bluetoothScan].request().then((status) {
-      runApp(MaterialApp(
-        theme: themeData,
-        home: const MyApp(),
-      ));
-    });
-  } else {
-    runApp(MaterialApp(
-      theme: themeData,
-      home: const MyApp(),
-    ));
-  }
+  // if (Platform.isAndroid) {
+  //   WidgetsFlutterBinding.ensureInitialized();
+  //   [Permission.bluetooth, Permission.bluetoothConnect, Permission.bluetoothScan].request().then((status) {
+  //     runApp(MaterialApp(
+  //       theme: themeData,
+  //       home: const MyApp(),
+  //     ));
+  //   });
+  // } else {
+  //   runApp(MaterialApp(
+  //     theme: themeData,
+  //     home: const MyApp(),
+  //   ));
+  // }
+  runApp(MaterialApp(
+    theme: themeData,
+    home: const MyApp(),
+  ));
 }

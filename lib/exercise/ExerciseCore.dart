@@ -11,7 +11,6 @@ class ExerciseCore {
 
   ExerciseCore(this._heartRateStream, this._powerRateStream, this._powerSetFunction, {heartRateTarget});
 
-  late PID pid;
   Timer? timer;
 
   StreamSubscription<int>? _powerRateStreamSubscription;
@@ -24,11 +23,11 @@ class ExerciseCore {
   double minPower = 100;
   double maxPower = 250;
 
+  PID pid = PID(Kp: 1, Ki: 0.1, Kd: 0.05, setPoint: 125, minOutput: 100, maxOutput: 250);
+
   StreamController<ExerciseData> streamController = StreamController<ExerciseData>();
 
   Future<Stream<ExerciseData>> init() async {
-    pid = PID(Kp: 1, Ki: 0.1, Kd: 0.05, setPoint: heartRateTarget.toDouble(), minOutput: minPower, maxOutput: maxPower);
-
     await startReadingHeartRate();
     await startReadingAcutalPower();
     setPower(minPower.toInt());
