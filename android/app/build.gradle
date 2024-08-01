@@ -49,7 +49,7 @@ android {
     defaultConfig {
         applicationId "ie.cronelea.zone_2_training"
         minSdkVersion 21
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }

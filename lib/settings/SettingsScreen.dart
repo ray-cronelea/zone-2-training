@@ -13,9 +13,11 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final maxHeartRateController = TextEditingController();
+  final maxPowerOutputController = TextEditingController();
 
   bool _simMode = false;
   int _maxHeartRate = 0;
+  int _maxPowerOutput = 0;
 
   @override
   void initState() {
@@ -27,11 +29,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     super.dispose();
     maxHeartRateController.dispose();
+    maxPowerOutputController.dispose();
   }
 
   Future<void> readSettings() async {
     bool simMode = await Preferences.isSimMode();
     int maxHeartRate = await Preferences.getMaxHeartRate();
+    int maxPowerSetpoint = await Preferences.getMaxPowerSetpoint();
+
     maxHeartRateController.text = maxHeartRate.toString();
     maxHeartRateController.addListener(() {
       print("change");
@@ -41,6 +46,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         saveMaxHeartRate(_maxHeartRate);
       }
     });
+
+    maxPowerOutputController.text = maxPowerSetpoint.toString();
+    maxPowerOutputController.addListener(() {
+      print("change");
+      int newVal = int.parse(maxPowerOutputController.text);
+      if (_maxPowerOutput != newVal) {
+        _maxPowerOutput = newVal;
+        saveMaxPowerOutput(_maxPowerOutput);
+      }
+    });
+
     setState(() {
       _simMode = simMode;
       _maxHeartRate = maxHeartRate;
@@ -56,6 +72,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> saveMaxHeartRate(int value) async {
     await Preferences.saveMaxHeartRate(value);
+  }
+
+  Future<void> saveMaxPowerOutput(int value) async {
+    await Preferences.saveMaxPowerSetpoint(value);
   }
 
   @override
@@ -87,6 +107,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 suffixText: "BPM",
                 labelText: 'Max Heart Rate',
                 hintText: 'Enter your max heart rate',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: maxPowerOutputController,
+              keyboardType: TextInputType.number,
+              inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.power),
+                suffixText: "Watt",
+                labelText: 'Max Power Setpoint',
+                hintText: 'The power setpoint will not be set higher than this value',
                 border: OutlineInputBorder(),
               ),
             ),

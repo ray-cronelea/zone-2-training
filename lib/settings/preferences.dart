@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class Preferences {
   static const String BOOL_SIM_MODE = "SIM MODE";
   static const String INT_MAX_HEARTRATE = "MAX HEART RATE";
+  static const String INT_MAX_POWER_SETPOINT = "MAX POWER SETPOINT RATE";
 
   static final Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
 
@@ -43,4 +44,25 @@ class Preferences {
     print("No value read from saved preferences. Returning default");
     return 180;
   }
+
+  static Future<int> getMaxPowerSetpoint() async {
+    SharedPreferences pref = await _prefs;
+    int? maxPowerSetpoint = pref.getInt(INT_MAX_POWER_SETPOINT);
+
+    print('INT_MAX_POWER_SETPOINT value read : $maxPowerSetpoint');
+
+    if (maxPowerSetpoint != null) {
+      return maxPowerSetpoint;
+    }
+
+    print("No value read from saved preferences. Returning default");
+    return 280;
+  }
+
+  static saveMaxPowerSetpoint(int maxPowerSetpoint) async {
+    SharedPreferences pref = await _prefs;
+    pref.setInt(INT_MAX_POWER_SETPOINT, maxPowerSetpoint).then((value) => print('saveMaxPowerSetpoint was successful: $value'));
+  }
+
+
 }

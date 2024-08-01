@@ -58,8 +58,6 @@ class BluetoothDevices implements DeviceDataProvider {
       BleOutputProperty.withResponse,
     );
 
-
-    //List<int> currentPowerSetpointBytes = toUint8List(currentPowerSetpoint);
     // Write setpoint
     UniversalBle.writeValue(
       powerRateDeviceId,

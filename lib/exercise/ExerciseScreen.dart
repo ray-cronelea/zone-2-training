@@ -227,15 +227,18 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
       _heartRateTarget = zone2HeartRate;
     });
 
-    _exerciseCore = ExerciseCore(_deviceDataProvider.getHeartRateStream(), _deviceDataProvider.getPowerStream(), _deviceDataProvider.setPower,
-        heartRateTarget: zone2HeartRate);
+    int maxPowerSetpoint = await Preferences.getMaxPowerSetpoint();
+
+    _exerciseCore = ExerciseCore(
+        _deviceDataProvider.getHeartRateStream(),
+        _deviceDataProvider.getPowerStream(),
+        _deviceDataProvider.setPower
+    );
 
     _exerciseCore.setHeartRateTarget(zone2HeartRate);
-    setState(() {
-      _heartRateTarget = zone2HeartRate;
-    });
-
+    _exerciseCore.setMaxPowerSetpoint(maxPowerSetpoint);
     Stream<ExerciseData> exerciseDataStream = await _exerciseCore.init();
+
     exerciseDataStream.listen((exerciseSample) {
       setState(() {
         _heartRateValue = exerciseSample.heartRateValue;

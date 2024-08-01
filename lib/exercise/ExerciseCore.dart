@@ -8,8 +8,9 @@ class ExerciseCore {
   final void Function(int) _powerSetFunction;
 
   int heartRateTarget = 125;
+  double maxPowerSetpoint = 280;
 
-  ExerciseCore(this._heartRateStream, this._powerRateStream, this._powerSetFunction, {heartRateTarget});
+  ExerciseCore(this._heartRateStream, this._powerRateStream, this._powerSetFunction);
 
   Timer? timer;
 
@@ -21,13 +22,13 @@ class ExerciseCore {
   int _heartRateValue = 0;
 
   double minPower = 100;
-  double maxPower = 250;
 
-  PID pid = PID(Kp: 1, Ki: 0.1, Kd: 0.05, setPoint: 125, minOutput: 100, maxOutput: 250);
+  PID pid = PID(Kp: 1, Ki: 0.1, Kd: 0.05, setPoint: 125);
 
   StreamController<ExerciseData> streamController = StreamController<ExerciseData>();
 
   Future<Stream<ExerciseData>> init() async {
+    pid.minOutput = minPower;
     await startReadingHeartRate();
     await startReadingAcutalPower();
     setPower(minPower.toInt());
@@ -80,6 +81,11 @@ class ExerciseCore {
   void setHeartRateTarget(int value) {
     heartRateTarget = value;
     pid.setPoint = heartRateTarget.toDouble();
+  }
+
+  void setMaxPowerSetpoint(int value) {
+    maxPowerSetpoint = value.toDouble();
+    pid.maxOutput = maxPowerSetpoint;
   }
 }
 
